@@ -13,4 +13,4 @@
 
 ## Сборка
 
-Нужен JDK 21. Выполните `./gradlew --no-daemon clean build`. JAR появится в `build/libs/`.
+Нужен JDK 21. Выполните `./gradlew --no-daemon clean build`. JAR появится в `build/libs/` под именем `RuleHelper-1.21.11-Fabric.jar`.

@@ -6,7 +6,7 @@ version = '1.1.0'
 group = 'ru.dmitry'
 
 base {
-    archivesName = 'RuleHelper-1.21.11-Universal-DonationSelect'
+    archivesName = 'RuleHelper-1.21.11-Fabric'
 }
 
 repositories {
@@ -23,6 +23,10 @@ dependencies {
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(21)
     withSourcesJar()
+}
+
+tasks.withType(Jar).configureEach {
+    archiveVersion.set('')
 }
 
 tasks.withType(JavaCompile).configureEach {

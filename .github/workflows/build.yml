@@ -15,8 +15,10 @@ jobs:
         include:
           - minecraft: 1.21.11
             project: versions/1.21.11
+            artifact: RuleHelper-1.21.11-Fabric.jar
           - minecraft: 1.21.4
             project: versions/1.21.4
+            artifact: RuleHelper-1.21.4-Fabric.jar
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -31,5 +33,65 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: RuleHelper-Minecraft-${{ matrix.minecraft }}
-          path: ${{ matrix.project }}/build/libs/*-1.1.0.jar
+          path: ${{ matrix.project }}/build/libs/${{ matrix.artifact }}
           if-no-files-found: error
+
+  release:
+    name: Publish v1.1.0 release
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      contains(github.event.head_commit.message, '[publish-release]')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download both JARs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: RuleHelper-Minecraft-*
+          path: release-assets
+          merge-multiple: true
+      - name: Create GitHub Release and upload JARs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const files = [
+              'RuleHelper-1.21.11-Fabric.jar',
+              'RuleHelper-1.21.4-Fabric.jar',
+            ];
+            const { data: release } = await github.rest.repos.createRelease({
+              owner,
+              repo,
+              tag_name: 'v1.1.0',
+              target_commitish: context.sha,
+              name: 'RuleHelper v1.1.0',
+              body: [
+                'Fabric-клиентский мод для Minecraft.',
+                '',
+                '- Minecraft 1.21.11: `RuleHelper-1.21.11-Fabric.jar`',
+                '- Minecraft 1.21.4: `RuleHelper-1.21.4-Fabric.jar`',
+              ].join('\n'),
+              draft: false,
+              prerelease: false,
+            });
+            for (const name of files) {
+              const filePath = `release-assets/${name}`;
+              if (!fs.existsSync(filePath)) throw new Error(`Missing release file: ${filePath}`);
+              const data = fs.readFileSync(filePath);
+              await github.rest.repos.uploadReleaseAsset({
+                owner,
+                repo,
+                release_id: release.id,
+                name,
+                data,
+                headers: {
+                  'content-type': 'application/java-archive',
+                  'content-length': data.length,
+                },
+              });
+            }
