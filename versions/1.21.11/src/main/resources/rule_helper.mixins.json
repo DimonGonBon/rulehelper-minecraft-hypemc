@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "ru.dmitry.rulehelper.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": ["ChatScreenMixin", "ChatHudAccessor"],
+  "injectors": { "defaultRequire": 1 }
+}
