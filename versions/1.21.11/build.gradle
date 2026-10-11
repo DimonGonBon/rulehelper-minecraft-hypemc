@@ -25,10 +25,6 @@ java {
     withSourcesJar()
 }
 
-tasks.withType(Jar).configureEach {
-    archiveVersion.set('')
-}
-
 tasks.withType(JavaCompile).configureEach {
     options.release = 21
     options.encoding = 'UTF-8'

@@ -29,11 +29,18 @@ jobs:
       - name: Build mod
         working-directory: ${{ matrix.project }}
         run: ./gradlew --no-daemon clean build
+      - name: Stage JAR with release filename
+        shell: bash
+        working-directory: ${{ matrix.project }}
+        run: |
+          source_jar="$(find build/libs -maxdepth 1 -type f -name '*-1.1.0.jar' ! -name '*-sources-1.1.0.jar' -print -quit)"
+          test -n "$source_jar"
+          cp "$source_jar" "$GITHUB_WORKSPACE/${{ matrix.artifact }}"
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
           name: RuleHelper-Minecraft-${{ matrix.minecraft }}
-          path: ${{ matrix.project }}/build/libs/${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
           if-no-files-found: error
 
   release:
