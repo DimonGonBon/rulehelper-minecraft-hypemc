@@ -158,15 +158,15 @@ public final class RuleMenuScreen extends class_437 {
 
    private void choose(RuleEntry rule) {
       if (rule.actions().size() == 1) {
-         this.execute((RuleAction)rule.actions().getFirst());
+         this.execute(rule, (RuleAction)rule.actions().getFirst());
       } else {
          this.field_22787.method_1507(new ActionChoiceScreen(this.playerName, rule, this.firstRow));
       }
    }
 
-   private void execute(RuleAction action) {
+   private void execute(RuleEntry rule, RuleAction action) {
       if (this.field_22787 != null && this.field_22787.method_1562() != null) {
-         String command = RuleHelperConfig.applyDonationScope(action.commandFor(this.playerName));
+         String command = RuleHelperConfig.applyDonationScope(action.commandFor(this.playerName), rule.code());
          this.field_22787.method_1562().method_45730(command.startsWith("/") ? command.substring(1) : command);
          this.method_25419();
       }
@@ -180,7 +180,7 @@ public final class RuleMenuScreen extends class_437 {
 
       for (RuleAction action : rule.actions()) {
          result = result.method_10852(class_2561.method_43470("\n" + action.label() + ": ").method_27692(class_124.field_1080))
-            .method_10852(class_2561.method_43470(RuleHelperConfig.applyDonationScope(action.commandFor(this.playerName))).method_27692(class_124.field_1075));
+            .method_10852(class_2561.method_43470(RuleHelperConfig.applyDonationScope(action.commandFor(this.playerName), rule.code())).method_27692(class_124.field_1075));
       }
 
       return result;
