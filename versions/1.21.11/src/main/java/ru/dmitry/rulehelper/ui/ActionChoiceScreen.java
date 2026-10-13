@@ -43,7 +43,7 @@ public final class ActionChoiceScreen extends class_437 {
             .method_27692(class_124.field_1080)
             .method_10852(class_2561.method_43470("\nНаказание: ").method_27692(class_124.field_1065))
             .method_10852(class_2561.method_43470(action.label()).method_27692(class_124.field_1054))
-            .method_10852(class_2561.method_43470("\n" + RuleHelperConfig.applyDonationScope(action.commandFor(this.playerName))).method_27692(class_124.field_1075));
+            .method_10852(class_2561.method_43470("\n" + RuleHelperConfig.applyDonationScope(action.commandFor(this.playerName), this.rule.code())).method_27692(class_124.field_1075));
          this.method_37063(
             class_4185.method_46430(class_2561.method_43470(action.label()), b -> this.execute(action))
                .method_46434(x, top + i * 25, buttonWidth, 20)
@@ -68,7 +68,7 @@ public final class ActionChoiceScreen extends class_437 {
 
    private void execute(RuleAction action) {
       if (this.field_22787 != null && this.field_22787.method_1562() != null) {
-         String command = RuleHelperConfig.applyDonationScope(action.commandFor(this.playerName));
+         String command = RuleHelperConfig.applyDonationScope(action.commandFor(this.playerName), this.rule.code());
          this.field_22787.method_1562().method_45730(command.startsWith("/") ? command.substring(1) : command);
          this.method_25419();
       }
