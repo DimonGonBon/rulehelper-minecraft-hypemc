@@ -57,6 +57,11 @@ public final class RuleHelperConfig {
       }
    }
 
+   /** Keeps donation scope for standalone extra commands that are not tied to a numbered rule. */
+   public static String applyDonationScope(String command) {
+      return applyDonationScope(command, null);
+   }
+
    /** Adds -g for Правитель+ only to rules 1–3. The rule code is passed explicitly. */
    public static String applyDonationScope(String command, String ruleCode) {
       String normalized = command.trim();
