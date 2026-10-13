@@ -57,13 +57,14 @@ public final class RuleHelperConfig {
       }
    }
 
-   /** Keeps command suffixes in sync with the selected donation group. */
+   /** Adds -g for Правитель+ only to rules 1–3; rule 4 commands stay global-suffix-free. */
    public static String applyDonationScope(String command) {
       String normalized = command.trim();
       while (normalized.endsWith(" -g")) {
          normalized = normalized.substring(0, normalized.length() - 3).trim();
       }
-      if (tier == DonationTier.LEADER) {
+      boolean ruleFour = normalized.matches("(?s).*\\b4\\.\\d+.*");
+      if (tier == DonationTier.LEADER && !ruleFour) {
          normalized += " -g";
       }
       return normalized;
