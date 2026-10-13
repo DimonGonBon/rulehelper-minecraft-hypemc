@@ -1,3 +1,4 @@
+# Rebuild and publish v1.1.1 after fixing compilation errors
 name: Build RuleHelper
 
 on:
