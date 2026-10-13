@@ -33,7 +33,7 @@ jobs:
         shell: bash
         working-directory: ${{ matrix.project }}
         run: |
-          source_jar="$(find build/libs -maxdepth 1 -type f -name '*-1.1.0.jar' ! -name '*-sources-1.1.0.jar' -print -quit)"
+          source_jar="$(find build/libs -maxdepth 1 -type f -name '*-1.1.1.jar' ! -name '*-sources-1.1.1.jar' -print -quit)"
           test -n "$source_jar"
           cp "$source_jar" "$GITHUB_WORKSPACE/${{ matrix.artifact }}"
       - name: Upload JAR
@@ -44,7 +44,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: Publish v1.1.0 release
+    name: Publish v1.1.1 release
     if: >-
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
@@ -74,9 +74,9 @@ jobs:
             const { data: release } = await github.rest.repos.createRelease({
               owner,
               repo,
-              tag_name: 'v1.1.0',
+              tag_name: 'v1.1.1',
               target_commitish: context.sha,
-              name: 'RuleHelper v1.1.0',
+              name: 'RuleHelper v1.1.1',
               body: [
                 'Fabric-клиентский мод для Minecraft.',
                 '',
