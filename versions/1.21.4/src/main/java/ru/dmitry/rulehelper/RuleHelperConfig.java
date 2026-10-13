@@ -57,13 +57,13 @@ public final class RuleHelperConfig {
       }
    }
 
-   /** Adds -g for Правитель+ only to rules 1–3; rule 4 commands stay global-suffix-free. */
-   public static String applyDonationScope(String command) {
+   /** Adds -g for Правитель+ only to rules 1–3. The rule code is passed explicitly. */
+   public static String applyDonationScope(String command, String ruleCode) {
       String normalized = command.trim();
       while (normalized.endsWith(" -g")) {
          normalized = normalized.substring(0, normalized.length() - 3).trim();
       }
-      boolean ruleFour = normalized.matches("(?s).*\\b4\\.\\d+.*");
+      boolean ruleFour = ruleCode != null && ruleCode.startsWith("4.");
       if (tier == DonationTier.LEADER && !ruleFour) {
          normalized += " -g";
       }
