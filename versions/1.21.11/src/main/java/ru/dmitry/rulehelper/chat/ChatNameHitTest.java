@@ -70,7 +70,7 @@ public final class ChatNameHitTest {
       var1.accept((var3, var4x, var5x) -> {
          String var6x = new String(Character.toChars(var5x));
          int var7x = var0.method_27525(class_2561.method_43470(var6x).method_10862(var4x));
-         var4.add(new ChatNameHitTest.Glyph(var6x, var5[0], var5[0] + Math.max(0, var7x)));
+         var4.add(new ChatNameHitTest.Glyph(var6x, var5[0], var5[0] + Math.max(0, var7x), var3.method_10975() != null));
          var5[0] += Math.max(0, var7x);
          return true;
       });
@@ -79,6 +79,11 @@ public final class ChatNameHitTest {
       for (int var7 = 0; var7 < var4.size(); var7++) {
          ChatNameHitTest.Glyph var8 = (ChatNameHitTest.Glyph)var4.get(var7);
          if (var2 >= var8.start && var2 < var8.end && isNameChar(var8.text)) {
+            // Respect clickable chat components (e.g. WorldGuard [Add] buttons).
+            // RuleHelper should only intercept ordinary player-name clicks.
+            if (var8.clickable) {
+               return null;
+            }
             var6 = var7;
             break;
          }
@@ -123,6 +128,6 @@ public final class ChatNameHitTest {
       return var1 >= 65 && var1 <= 90 || var1 >= 97 && var1 <= 122 || var1 >= 48 && var1 <= 57 || var1 == 95;
    }
 
-   private record Glyph(String text, int start, int end) {
+   private record Glyph(String text, int start, int end, boolean clickable) {
    }
 }
