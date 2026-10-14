@@ -70,7 +70,7 @@ public final class ChatNameHitTest {
       var1.accept((var3, var4x, var5x) -> {
          String var6x = new String(Character.toChars(var5x));
          int var7x = var0.method_27525(class_2561.method_43470(var6x).method_10862(var4x));
-         var4.add(new ChatNameHitTest.Glyph(var6x, var5[0], var5[0] + Math.max(0, var7x), var3.method_10975() != null));
+         var4.add(new ChatNameHitTest.Glyph(var6x, var5[0], var5[0] + Math.max(0, var7x), var4x.method_10975() != null));
          var5[0] += Math.max(0, var7x);
          return true;
       });
