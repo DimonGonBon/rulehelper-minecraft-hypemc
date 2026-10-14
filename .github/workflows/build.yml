@@ -1,4 +1,4 @@
-# Rebuild and publish v1.1.1 after fixing compilation errors
+# Build and publish RuleHelper v1.1.1
 name: Build RuleHelper
 
 on:
@@ -61,42 +61,62 @@ jobs:
           pattern: RuleHelper-Minecraft-*
           path: release-assets
           merge-multiple: true
-      - name: Create GitHub Release and upload JARs
+      - name: Update existing GitHub Release and upload JARs
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
             const owner = context.repo.owner;
             const repo = context.repo.repo;
+            const tag_name = 'v1.1.1';
             const files = [
               'RuleHelper-1.21.11-Fabric.jar',
               'RuleHelper-1.21.4-Fabric.jar',
             ];
-            const { data: release } = await github.rest.repos.createRelease({
-              owner,
-              repo,
-              tag_name: 'v1.1.1',
-              target_commitish: context.sha,
-              name: 'RuleHelper v1.1.1',
-              body: [
-                'Fabric-клиентский мод для Minecraft.',
-                '',
-                '- Minecraft 1.21.11: `RuleHelper-1.21.11-Fabric.jar`',
-                '- Minecraft 1.21.4: `RuleHelper-1.21.4-Fabric.jar`',
-              ].join('\n'),
-              draft: false,
-              prerelease: false,
+            const body = [
+              'Fabric-клиентский мод для Minecraft.',
+              '',
+              '- Minecraft 1.21.11: `RuleHelper-1.21.11-Fabric.jar`',
+              '- Minecraft 1.21.4: `RuleHelper-1.21.4-Fabric.jar`',
+              '',
+              'Исправлено перехватывание кликов по кликабельным компонентам чата: собственные действия элементов, например [Add], сохраняются.',
+            ].join('\n');
+
+            let release;
+            try {
+              const result = await github.rest.repos.getReleaseByTag({ owner, repo, tag: tag_name });
+              release = result.data;
+              const updated = await github.rest.repos.updateRelease({
+                owner, repo, release_id: release.id,
+                name: 'RuleHelper v1.1.1',
+                body,
+                draft: false,
+                prerelease: false,
+                make_latest: 'true',
+              });
+              release = updated.data;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              const result = await github.rest.repos.createRelease({
+                owner, repo, tag_name, target_commitish: context.sha,
+                name: 'RuleHelper v1.1.1', body,
+                draft: false, prerelease: false,
+              });
+              release = result.data;
+            }
+
+            const { data: existingAssets } = await github.rest.repos.listReleaseAssets({
+              owner, repo, release_id: release.id, per_page: 100,
             });
             for (const name of files) {
               const filePath = `release-assets/${name}`;
               if (!fs.existsSync(filePath)) throw new Error(`Missing release file: ${filePath}`);
+              for (const asset of existingAssets.filter(item => item.name === name)) {
+                await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: asset.id });
+              }
               const data = fs.readFileSync(filePath);
               await github.rest.repos.uploadReleaseAsset({
-                owner,
-                repo,
-                release_id: release.id,
-                name,
-                data,
+                owner, repo, release_id: release.id, name, data,
                 headers: {
                   'content-type': 'application/java-archive',
                   'content-length': data.length,
