@@ -118,7 +118,7 @@ public final class ChatNameHitTest {
 
    private static String orderedLineText(class_5481 text) {
       StringBuilder result = new StringBuilder();
-      text.accept((style, index, codePoint) -> {
+      text.accept((index, style, codePoint) -> {
          result.appendCodePoint(codePoint);
          return true;
       });
@@ -128,7 +128,7 @@ public final class ChatNameHitTest {
    private static boolean hasClickableComponentAt(class_327 renderer, class_5481 text, double x) {
       int[] cursor = {0};
       boolean[] clickable = {false};
-      text.accept((style, index, codePoint) -> {
+      text.accept((index, style, codePoint) -> {
          String character = new String(Character.toChars(codePoint));
          int width = renderer.method_27525(class_2561.method_43470(character).method_10862(style));
          if (x >= cursor[0] && x < cursor[0] + width && style.method_10970() != null) clickable[0] = true;
