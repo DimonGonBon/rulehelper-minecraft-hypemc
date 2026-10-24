@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 public record PunishmentAnnouncement(Kind kind, String issuer, String target, String duration, String reason, String originalLine, boolean ipTarget) {
    private static final String DURATION = "(?:навсегда|[0-9]{1,4}\\s+(?:секунд(?:у|ы)?|минут(?:у|ы)?|час(?:а|ов)?|день|дня|дней|неделю|недели|месяц|месяца|месяцев))";
    private static final Pattern MESSAGE = Pattern.compile(
-      "^❨[！!]❩\\s*Игрок\\s+([A-Za-z0-9_]{3,16})\\s+(забанил|замутил)\\s+(IP\\s+)?([A-Za-z0-9_]{3,16})>?\\s+(?:на\\s+(" + DURATION + ")\\s+)?по\\s+причине:\\s*(.{1,160})$",
+      "^❨[！!]❩\\s*Игрок\\s+([\\p{L}\\p{N}_]{3,16})\\s+(забанил|замутил)\\s+(IP\\s+)?([\\p{L}\\p{N}_]{3,16})>?\\s+(?:на\\s+(" + DURATION + ")\\s+)?по\\s+причине:\\s*(.{1,160})$",
       Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
    );
    private static final Pattern MODE = Pattern.compile("^(.*?)\\s*\\(([^()]*)\\)\\s*$");
