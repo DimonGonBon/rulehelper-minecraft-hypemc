@@ -96,7 +96,6 @@ public final class ChatNameHitTest {
       String clickedText = orderedLineText(clickedOrdered);
       double relativeX = mouseX / scale - 4.0;
       if (relativeX < 0 || relativeX > client.field_1772.method_27525(class_2561.method_43470(clickedText))) return null;
-      if (hasClickableComponentAt(client.field_1772, clickedOrdered, relativeX)) return null;
 
       // ChatHud stores wrapped lines from bottom to top. Start only at the exact
       // announcement prefix, then append lower rows (smaller indices) until the
@@ -106,7 +105,7 @@ public final class ChatNameHitTest {
       int last = Math.min(scroll + visibleCount - 1, clickedIndex + 2);
       for (int prefixIndex = first; prefixIndex <= last; prefixIndex++) {
          String firstLine = orderedLineText(((class_7590)lines.get(prefixIndex)).comp_896()).stripLeading();
-         if (!firstLine.startsWith("❨！❩ Игрок ")) continue;
+         if (!PunishmentAnnouncement.startsAnnouncement(firstLine)) continue;
          StringBuilder candidate = new StringBuilder(firstLine);
          for (int parts = 1; parts <= 3 && prefixIndex - (parts - 1) >= scroll; parts++) {
             int lastPart = prefixIndex - (parts - 1);
