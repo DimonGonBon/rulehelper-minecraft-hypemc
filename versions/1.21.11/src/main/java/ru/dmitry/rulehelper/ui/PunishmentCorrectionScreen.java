@@ -31,14 +31,18 @@ public final class PunishmentCorrectionScreen extends class_437 {
       y += 14;
       y = this.addWrappedText(y, this.announcement.originalLine(), maxWidth, class_124.field_1075);
       y += 3;
-      this.addCenteredText(y, class_2561.method_43470("Выдал наказание: " + this.announcement.issuer()).method_27692(class_124.field_1075), maxWidth);
+      class_2561 issuer = class_2561.method_43470("Выдал наказание: ").method_27695(new class_124[]{class_124.field_1067, class_124.field_1054})
+         .method_10852(class_2561.method_43470(this.announcement.issuer()).method_27692(class_124.field_1075));
+      this.addCenteredText(y, issuer, maxWidth);
       y += 15;
       this.addCenteredText(y, class_2561.method_43470("Получил наказание: " + this.announcement.target()).method_27692(class_124.field_1065), maxWidth);
       y += 15;
-      this.addCenteredText(y, class_2561.method_43470("Причина / срок: " + this.announcement.cleanReason() + " / " + this.announcement.duration()), maxWidth);
-      y += 15;
-      this.addCenteredText(y, class_2561.method_43470("Режим: " + this.announcement.mode()), maxWidth);
-      y += 19;
+      y = this.addField(y, "Причина:", this.announcement.cleanReason(), maxWidth);
+      y += 2;
+      y = this.addField(y, "Срок:", this.announcement.duration(), maxWidth);
+      y += 2;
+      y = this.addField(y, "Режим:", this.announcement.mode(), maxWidth);
+      y += 16;
 
       if (!RuleHelperConfig.isConfigured()) {
          this.addCenteredText(y, class_2561.method_43470("Сначала укажи ник и донат в настройке Rule Helper."), maxWidth);
@@ -60,7 +64,29 @@ public final class PunishmentCorrectionScreen extends class_437 {
          this.addButton("Подтверждаю снятие — выдать 3.4", this.field_22789 / 2 - 155, y, 310, this::issueRule34);
       }
 
+      this.addCenteredText(this.field_22790 - 58, class_2561.method_43470("ВНИМАНИЕ: ВНИМАТЕЛЬНО ПРОВЕРЬ ВСЕ ДАННЫЕ!").method_27692(class_124.field_1061), maxWidth);
+      this.addCenteredText(this.field_22790 - 46, class_2561.method_43470("НИКИ, ПРИЧИНУ, СРОК И РЕЖИМ ПЕРЕД ДЕЙСТВИЕМ.").method_27692(class_124.field_1061), maxWidth);
+
       this.addButton("Отмена", this.field_22789 / 2 - 48, this.field_22790 - 32, 96, this::close);
+   }
+
+   private int addField(int y, String label, String value, int maxWidth) {
+      String labelPrefix = label + " ";
+      List<String> lines = this.wrap(labelPrefix + value, maxWidth);
+      for (int i = 0; i < lines.size(); i++) {
+         String line = lines.get(i);
+         class_2561 text;
+         if (i == 0) {
+            String content = line.length() > labelPrefix.length() ? line.substring(labelPrefix.length()) : "";
+            text = class_2561.method_43470(labelPrefix).method_27692(class_124.field_1067)
+               .method_10852(class_2561.method_43470(content).method_27692(class_124.field_1075));
+         } else {
+            text = class_2561.method_43470(line).method_27692(class_124.field_1075);
+         }
+         this.addCenteredText(y, text, maxWidth);
+         y += 12;
+      }
+      return y;
    }
 
    private int addWrappedText(int y, String value, int maxWidth, class_124 color) {
