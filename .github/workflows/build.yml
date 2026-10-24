@@ -1,4 +1,4 @@
-# Build and publish RuleHelper v1.1.2
+# Build and publish RuleHelper v1.1.3
 name: Build RuleHelper
 
 on:
@@ -34,7 +34,7 @@ jobs:
         shell: bash
         working-directory: ${{ matrix.project }}
         run: |
-          source_jar="$(find build/libs -maxdepth 1 -type f -name '*-1.1.2.jar' ! -name '*-sources-1.1.2.jar' -print -quit)"
+          source_jar="$(find build/libs -maxdepth 1 -type f -name '*-1.1.3.jar' ! -name '*-sources-1.1.3.jar' -print -quit)"
           test -n "$source_jar"
           cp "$source_jar" "$GITHUB_WORKSPACE/${{ matrix.artifact }}"
       - name: Upload JAR
@@ -45,7 +45,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: Publish v1.1.2 release
+    name: Publish v1.1.3 release
     if: >-
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
@@ -68,7 +68,7 @@ jobs:
             const fs = require('fs');
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const tag_name = 'v1.1.2';
+            const tag_name = 'v1.1.3';
             const files = [
               'RuleHelper-1.21.11-Fabric.jar',
               'RuleHelper-1.21.4-Fabric.jar',
@@ -88,7 +88,7 @@ jobs:
               release = result.data;
               const updated = await github.rest.repos.updateRelease({
                 owner, repo, release_id: release.id,
-                name: 'RuleHelper v1.1.2',
+                name: 'RuleHelper v1.1.3',
                 body,
                 draft: false,
                 prerelease: false,
@@ -99,7 +99,7 @@ jobs:
               if (error.status !== 404) throw error;
               const result = await github.rest.repos.createRelease({
                 owner, repo, tag_name, target_commitish: context.sha,
-                name: 'RuleHelper v1.1.2', body,
+                name: 'RuleHelper v1.1.3', body,
                 draft: false, prerelease: false,
               });
               release = result.data;

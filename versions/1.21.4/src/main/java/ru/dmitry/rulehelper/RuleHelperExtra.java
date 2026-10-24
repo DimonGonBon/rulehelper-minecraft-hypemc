@@ -60,9 +60,9 @@ public final class RuleHelperExtra {
       }).method_46434(x, buttonY(screenHeight), width, 20).method_46431();
    }
 
-   public static class_4185 makeHistoryButton(String command, String target, int screenWidth, int screenHeight, int row) {
+   public static class_4185 makePlayerCommandButton(String command, String target, int screenWidth, int screenHeight, int row) {
       int width = Math.min(220, Math.max(140, screenWidth / 4 - 20));
-      int y = screenHeight / 2 - 23 + row * 26;
+      int y = screenHeight / 2 - 36 + row * 26;
       String label = command + " " + target;
       return class_4185.method_46430(class_2561.method_43470(label), button -> {
          class_310 client = class_310.method_1551();
