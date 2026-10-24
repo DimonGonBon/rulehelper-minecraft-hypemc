@@ -98,19 +98,23 @@ public final class ChatNameHitTest {
       if (relativeX < 0 || relativeX > client.field_1772.method_27525(class_2561.method_43470(clickedText))) return null;
       if (hasClickableComponentAt(client.field_1772, clickedOrdered, relativeX)) return null;
 
-      // Chat announcements wrap into visual rows. Rejoin up to three rows around the
-      // clicked one, then require the entire reconstructed sentence to match.
+      // ChatHud stores wrapped lines from bottom to top. Start only at the exact
+      // announcement prefix, then append lower rows (smaller indices) until the
+      // whole sentence parses. Never append rows above the announcement: those
+      // belong to earlier chat messages and could otherwise leak into the reason.
       int first = Math.max(scroll, clickedIndex - 2);
       int last = Math.min(scroll + visibleCount - 1, clickedIndex + 2);
-      for (int start = first; start <= clickedIndex; start++) {
-         for (int end = clickedIndex; end <= last && end - start < 3; end++) {
-            StringBuilder candidate = new StringBuilder();
-            for (int index = start; index <= end; index++) {
-               if (index > start) candidate.append(' ');
-               candidate.append(orderedLineText(((class_7590)lines.get(index)).comp_896()));
+      for (int prefixIndex = first; prefixIndex <= last; prefixIndex++) {
+         String firstLine = orderedLineText(((class_7590)lines.get(prefixIndex)).comp_896()).stripLeading();
+         if (!firstLine.startsWith("❨！❩ Игрок ")) continue;
+         StringBuilder candidate = new StringBuilder(firstLine);
+         for (int parts = 1; parts <= 3 && prefixIndex - (parts - 1) >= scroll; parts++) {
+            int lastPart = prefixIndex - (parts - 1);
+            if (parts > 1) {
+               candidate.append(' ').append(orderedLineText(((class_7590)lines.get(lastPart)).comp_896()));
             }
             PunishmentAnnouncement parsed = PunishmentAnnouncement.parse(candidate.toString());
-            if (parsed != null) return parsed;
+            if (parsed != null && clickedIndex >= lastPart && clickedIndex <= prefixIndex) return parsed;
          }
       }
       return null;
