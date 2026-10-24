@@ -33,8 +33,8 @@ public final class RuleHelperExtra {
                   "Выбери команду для игрока " + var0,
                   "Команда будет выполнена для выбранного ника",
                   List.of(
-                     new RuleAction("/unban " + var0 + " nekk", RuleHelperConfig.applyDonationScope("/unban {player} nekk")),
-                     new RuleAction("/unmute " + var0 + " nekk", RuleHelperConfig.applyDonationScope("/unmute {player} nekk"))
+                     new RuleAction("/unban " + var0 + " nekk", "/unban {player} nekk"),
+                     new RuleAction("/unmute " + var0 + " nekk", "/unmute {player} nekk")
                   )
                );
                var2x.method_1507(new ActionChoiceScreen(var0, var3x, 0));

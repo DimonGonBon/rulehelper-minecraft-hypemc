@@ -64,6 +64,80 @@ public final class ChatNameHitTest {
       }
    }
 
+   /** Matches only a complete, exact punishment announcement on the clicked chat row. */
+   public static PunishmentAnnouncement findPunishment(class_310 client, double mouseX, double mouseY) {
+      if (client == null || client.field_1705 == null) return null;
+      class_1041 window = client.method_22683();
+      if (window == null) return null;
+      class_338 chat = client.field_1705.method_1743();
+      if (!(chat instanceof ChatHudAccessor accessor)) return null;
+      List lines = accessor.ruleHelper$getVisibleMessages();
+      if (lines == null || lines.isEmpty()) return null;
+      double scale = (Double)client.field_1690.method_42554().method_41753();
+      double lineSpacing = (Double)client.field_1690.method_42546().method_41753();
+      if (scale <= 0.0) return null;
+      int scroll = Math.max(0, accessor.ruleHelper$getScrolledLines());
+      int visibleCount = Math.min(chat.method_1813(), lines.size() - scroll);
+      if (visibleCount <= 0) return null;
+      double top = Math.floor((window.method_4502() - 40.0) / scale);
+      double firstLineOffset = Math.round(8.0 * (1.0 + lineSpacing) - 4.0 * lineSpacing);
+      double rowHeight = 9.0 * (1.0 + lineSpacing);
+      int row = -1;
+      for (int visibleRow = 0; visibleRow < visibleCount; visibleRow++) {
+         double lineY = (top - visibleRow * rowHeight - firstLineOffset) * scale;
+         if (mouseY >= lineY && mouseY < lineY + 9.0 * scale) {
+            row = visibleRow;
+            break;
+         }
+      }
+      if (row < 0) return null;
+      int clickedIndex = scroll + row;
+      class_5481 clickedOrdered = ((class_7590)lines.get(clickedIndex)).comp_896();
+      String clickedText = orderedLineText(clickedOrdered);
+      double relativeX = mouseX / scale - 4.0;
+      if (relativeX < 0 || relativeX > client.field_1772.method_27525(class_2561.method_43470(clickedText))) return null;
+      if (hasClickableComponentAt(client.field_1772, clickedOrdered, relativeX)) return null;
+
+      // Chat announcements wrap into visual rows. Rejoin up to three rows around the
+      // clicked one, then require the entire reconstructed sentence to match.
+      int first = Math.max(scroll, clickedIndex - 2);
+      int last = Math.min(scroll + visibleCount - 1, clickedIndex + 2);
+      for (int start = first; start <= clickedIndex; start++) {
+         for (int end = clickedIndex; end <= last && end - start < 3; end++) {
+            StringBuilder candidate = new StringBuilder();
+            for (int index = start; index <= end; index++) {
+               if (index > start) candidate.append(' ');
+               candidate.append(orderedLineText(((class_7590)lines.get(index)).comp_896()));
+            }
+            PunishmentAnnouncement parsed = PunishmentAnnouncement.parse(candidate.toString());
+            if (parsed != null) return parsed;
+         }
+      }
+      return null;
+   }
+
+   private static String orderedLineText(class_5481 text) {
+      StringBuilder result = new StringBuilder();
+      text.accept((style, index, codePoint) -> {
+         result.appendCodePoint(codePoint);
+         return true;
+      });
+      return result.toString();
+   }
+
+   private static boolean hasClickableComponentAt(class_327 renderer, class_5481 text, double x) {
+      int[] cursor = {0};
+      boolean[] clickable = {false};
+      text.accept((style, index, codePoint) -> {
+         String character = new String(Character.toChars(codePoint));
+         int width = renderer.method_27525(class_2561.method_43470(character).method_10862(style));
+         if (x >= cursor[0] && x < cursor[0] + width && style.method_10970() != null) clickable[0] = true;
+         cursor[0] += Math.max(0, width);
+         return true;
+      });
+      return clickable[0];
+   }
+
    private static String findTokenAt(class_327 var0, class_5481 var1, double var2) {
       ArrayList var4 = new ArrayList();
       int[] var5 = new int[]{0};
