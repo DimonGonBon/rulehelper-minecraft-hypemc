@@ -34,7 +34,7 @@ jobs:
         shell: bash
         working-directory: ${{ matrix.project }}
         run: |
-          source_jar="$(find build/libs -maxdepth 1 -type f -name '*-1.1.9.jar' ! -name '*-sources-1.1.9.jar' -print -quit)"
+          source_jar="$(find build/libs -maxdepth 1 -type f -name '*-1.2.0.jar' ! -name '*-sources-1.2.0.jar' -print -quit)"
           test -n "$source_jar"
           cp "$source_jar" "$GITHUB_WORKSPACE/${{ matrix.artifact }}"
       - name: Upload JAR
