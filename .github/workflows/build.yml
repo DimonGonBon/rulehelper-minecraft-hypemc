@@ -1,4 +1,4 @@
-# Build RuleHelper test artifacts
+# Build and publish RuleHelper v1.2.1
 name: Build RuleHelper
 
 on:
@@ -45,7 +45,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: Publish v1.1.3 release
+    name: Publish v1.2.1 release
     if: >-
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
@@ -68,7 +68,7 @@ jobs:
             const fs = require('fs');
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const tag_name = 'v1.1.3';
+            const tag_name = 'v1.2.1';
             const files = [
               'RuleHelper-1.21.11-Fabric.jar',
               'RuleHelper-1.21.4-Fabric.jar',
@@ -79,7 +79,8 @@ jobs:
               '- Minecraft 1.21.11: `RuleHelper-1.21.11-Fabric.jar`',
               '- Minecraft 1.21.4: `RuleHelper-1.21.4-Fabric.jar`',
               '',
-              'Исправлено перехватывание кликов по кликабельным компонентам чата: собственные действия элементов, например [Add], сохраняются.',
+              'Добавлена проверка объявлений о банах и мутах с подтверждением перед исправлением по правилу 3.4.
+В меню проверки отдельно показаны выдавший и получивший наказание, причина, срок и режим; добавлено красное предупреждение о проверке данных.',
             ].join('\n');
 
             let release;
@@ -88,7 +89,7 @@ jobs:
               release = result.data;
               const updated = await github.rest.repos.updateRelease({
                 owner, repo, release_id: release.id,
-                name: 'RuleHelper v1.1.3',
+                name: 'RuleHelper v1.2.1',
                 body,
                 draft: false,
                 prerelease: false,
@@ -99,7 +100,7 @@ jobs:
               if (error.status !== 404) throw error;
               const result = await github.rest.repos.createRelease({
                 owner, repo, tag_name, target_commitish: context.sha,
-                name: 'RuleHelper v1.1.3', body,
+                name: 'RuleHelper v1.2.1', body,
                 draft: false, prerelease: false,
               });
               release = result.data;
