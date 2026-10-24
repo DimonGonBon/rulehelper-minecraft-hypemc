@@ -1,5 +1,7 @@
 package ru.dmitry.rulehelper.chat;
 
+// Temporary CI trigger for RuleHelper test artifacts.
+
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.class_1041;
