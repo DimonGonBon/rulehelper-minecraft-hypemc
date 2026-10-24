@@ -1,5 +1,7 @@
 package ru.dmitry.rulehelper.chat;
 
+// Temporary CI trigger for diagnostic test artifacts.
+
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
