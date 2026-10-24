@@ -117,7 +117,9 @@ public final class PunishmentCorrectionScreen extends class_437 {
    }
 
    private String releaseCommand() {
-      String verb = this.announcement.kind() == PunishmentAnnouncement.Kind.BAN ? "/unban " : "/unmute ";
+      String verb = this.announcement.kind() == PunishmentAnnouncement.Kind.MUTE
+         ? "/unmute "
+         : (this.announcement.ipTarget() ? "/unbanip " : "/unban ");
       return verb + this.announcement.target() + " nekk";
    }
 
