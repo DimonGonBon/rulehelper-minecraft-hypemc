@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "rule_helper",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "name": "Rule Helper",
   "description": "Quickly choose a moderation rule from a player's chat name with saved nickname and donation tier settings.",
   "environment": "client",

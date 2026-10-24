@@ -4,7 +4,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /** A deliberately narrow parser for HypeMC punishment announcements. */
-public record PunishmentAnnouncement(Kind kind, String issuer, String target, String duration, String reason) {
+public record PunishmentAnnouncement(Kind kind, String issuer, String target, String duration, String reason, String originalLine) {
    private static final Pattern MESSAGE = Pattern.compile(
       "^❨！❩ Игрок ([A-Za-z0-9_]{3,16}) (забанил|замутил) ([A-Za-z0-9_]{3,16}) на ((?:навсегда|[0-9]{1,4}\\s+(?:секунд(?:у|ы)?|минут(?:у|ы)?|час(?:а|ов)?|день|дня|дней|неделю|недели|месяц|месяца|месяцев))) по причине: (.{1,160})$"
    );
@@ -20,7 +20,17 @@ public record PunishmentAnnouncement(Kind kind, String issuer, String target, St
       if (duration.isEmpty() || reason.isEmpty()) return null;
       return new PunishmentAnnouncement(
          matcher.group(2).equals("забанил") ? Kind.BAN : Kind.MUTE,
-         matcher.group(1), matcher.group(3), duration, reason
+         matcher.group(1), matcher.group(3), duration, reason, text.strip()
       );
+   }
+
+   public String cleanReason() {
+      Matcher mode = Pattern.compile("^(.*?)\\s*\\(([^()]*)\\)\\s*$").matcher(this.reason);
+      return mode.matches() && !mode.group(1).isBlank() ? mode.group(1).strip() : this.reason;
+   }
+
+   public String mode() {
+      Matcher mode = Pattern.compile("^(.*?)\\s*\\(([^()]*)\\)\\s*$").matcher(this.reason);
+      return mode.matches() && !mode.group(1).isBlank() ? mode.group(2).strip() : "не указан";
    }
 }

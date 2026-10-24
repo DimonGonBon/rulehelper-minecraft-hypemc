@@ -1,5 +1,7 @@
 package ru.dmitry.rulehelper.ui;
 
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.class_124;
 import net.minecraft.class_2561;
 import net.minecraft.class_332;
@@ -9,7 +11,7 @@ import net.minecraft.class_7842;
 import ru.dmitry.rulehelper.RuleHelperConfig;
 import ru.dmitry.rulehelper.chat.PunishmentAnnouncement;
 
-/** Two-step correction flow: release the original punishment, verify it, then issue 3.4. */
+/** Shows the captured announcement and fields before any correction command is sent. */
 public final class PunishmentCorrectionScreen extends class_437 {
    private final PunishmentAnnouncement announcement;
    private boolean released;
@@ -21,30 +23,88 @@ public final class PunishmentCorrectionScreen extends class_437 {
    }
 
    protected void method_25426() {
-      this.addCenteredText(15, class_2561.method_43470("ПРОВЕРЬ НИКИ ПЕРЕД КОМАНДОЙ").method_27695(new class_124[]{class_124.field_1054, class_124.field_1067}), 420);
-      this.addCenteredText(39, class_2561.method_43470("Выдал: " + this.announcement.issuer()).method_27692(class_124.field_1075), 420);
-      this.addCenteredText(55, class_2561.method_43470("Наказан: " + this.announcement.target()).method_27692(class_124.field_1065), 420);
-      this.addCenteredText(71, class_2561.method_43470("В чате: " + this.announcement.kind() + " / " + this.announcement.duration()).method_27692(class_124.field_1080), 480);
-      this.addCenteredText(87, class_2561.method_43470("Причина: " + this.announcement.reason()).method_27692(class_124.field_1080), Math.min(this.field_22789 - 24, 520));
+      int maxWidth = Math.min(this.field_22789 - 28, 560);
+      int y = 14;
+      this.addCenteredText(y, class_2561.method_43470("ПРОВЕРЬ ДАННЫЕ ПЕРЕД КОМАНДОЙ").method_27695(new class_124[]{class_124.field_1054, class_124.field_1067}), maxWidth);
+      y += 22;
+      this.addCenteredText(y, class_2561.method_43470("Строка наказания:").method_27692(class_124.field_1080), maxWidth);
+      y += 14;
+      y = this.addWrappedText(y, this.announcement.originalLine(), maxWidth, class_124.field_1075);
+      y += 3;
+      this.addCenteredText(y, class_2561.method_43470("Выдал наказание: " + this.announcement.issuer()).method_27692(class_124.field_1075), maxWidth);
+      y += 15;
+      this.addCenteredText(y, class_2561.method_43470("Получил наказание: " + this.announcement.target()).method_27692(class_124.field_1065), maxWidth);
+      y += 15;
+      this.addCenteredText(y, class_2561.method_43470("Причина / срок: " + this.announcement.cleanReason() + " / " + this.announcement.duration()), maxWidth);
+      y += 15;
+      this.addCenteredText(y, class_2561.method_43470("Режим: " + this.announcement.mode()), maxWidth);
+      y += 19;
 
       if (!RuleHelperConfig.isConfigured()) {
-         this.addCenteredText(118, class_2561.method_43470("Сначала укажи ник и донат в настройке Rule Helper."), Math.min(this.field_22789 - 24, 500));
+         this.addCenteredText(y, class_2561.method_43470("Сначала укажи ник и донат в настройке Rule Helper."), maxWidth);
       } else if (!this.released) {
-         this.addCenteredText(118, class_2561.method_43470("Сначала снимется исходный бан/мут без -g."), Math.min(this.field_22789 - 24, 500));
+         this.addCenteredText(y, class_2561.method_43470("Выбери наказание 3.4. Исходный бан/мут снимется без -g."), maxWidth);
+         y += 20;
          if (this.announcement.issuer().equalsIgnoreCase(this.announcement.target())) {
-            this.addButton("Снять и подготовить 3.4 — 6 часов", this.field_22789 / 2 - 150, 145, 300, () -> this.releaseAndPrepare("6h"));
+            this.addButton("Снять и подготовить 3.4 — 6 часов", this.field_22789 / 2 - 155, y, 310, () -> this.releaseAndPrepare("6h"));
          } else {
-            this.addButton("Снять и подготовить 3.4 — 3 дня", this.field_22789 / 2 - 150, 145, 300, () -> this.releaseAndPrepare("3d"));
-            this.addButton("Снять и подготовить 3.4 — 1 день", this.field_22789 / 2 - 150, 171, 300, () -> this.releaseAndPrepare("1d"));
+            this.addButton("Снять и подготовить 3.4 — 3 дня", this.field_22789 / 2 - 155, y, 310, () -> this.releaseAndPrepare("3d"));
+            y += 25;
+            this.addButton("Снять и подготовить 3.4 — 1 день", this.field_22789 / 2 - 155, y, 310, () -> this.releaseAndPrepare("1d"));
          }
       } else {
-         String releaseCommand = this.releaseCommand();
-         this.addCenteredText(116, class_2561.method_43470("Команда снятия отправлена: " + releaseCommand).method_27692(class_124.field_1075), Math.min(this.field_22789 - 24, 540));
-         this.addCenteredText(133, class_2561.method_43470("Проверь ответ сервера. Если снятие подтверждено — нажми ниже."), Math.min(this.field_22789 - 24, 560));
-         this.addButton("Подтверждаю снятие — выдать 3.4", this.field_22789 / 2 - 150, 158, 300, this::issueRule34);
+         this.addCenteredText(y, class_2561.method_43470("Отправлено: " + this.releaseCommand()).method_27692(class_124.field_1075), maxWidth);
+         y += 16;
+         this.addCenteredText(y, class_2561.method_43470("Проверь ответ сервера. После успешного снятия подтверди ниже."), maxWidth);
+         y += 20;
+         this.addButton("Подтверждаю снятие — выдать 3.4", this.field_22789 / 2 - 155, y, 310, this::issueRule34);
       }
 
-      this.addButton("Отмена", this.field_22789 / 2 - 48, this.field_22790 - 34, 96, this::close);
+      this.addButton("Отмена", this.field_22789 / 2 - 48, this.field_22790 - 32, 96, this::close);
+   }
+
+   private int addWrappedText(int y, String value, int maxWidth, class_124 color) {
+      for (String line : this.wrap(value, maxWidth)) {
+         class_2561 text = class_2561.method_43470(line).method_27692(color);
+         this.addCenteredText(y, text, maxWidth);
+         y += 12;
+      }
+      return y;
+   }
+
+   private List<String> wrap(String value, int maxWidth) {
+      List<String> lines = new ArrayList<>();
+      StringBuilder line = new StringBuilder();
+      for (String word : value.split("\\s+")) {
+         String candidate = line.isEmpty() ? word : line + " " + word;
+         if (this.field_22793.method_27525(class_2561.method_43470(candidate)) <= maxWidth) {
+            line.setLength(0);
+            line.append(candidate);
+            continue;
+         }
+         if (!line.isEmpty()) {
+            lines.add(line.toString());
+            line.setLength(0);
+         }
+         if (this.field_22793.method_27525(class_2561.method_43470(word)) <= maxWidth) {
+            line.append(word);
+         } else {
+            StringBuilder part = new StringBuilder();
+            for (int offset = 0; offset < word.length();) {
+               int codePoint = word.codePointAt(offset);
+               String character = new String(Character.toChars(codePoint));
+               if (!part.isEmpty() && this.field_22793.method_27525(class_2561.method_43470(part + character)) > maxWidth) {
+                  lines.add(part.toString());
+                  part.setLength(0);
+               }
+               part.append(character);
+               offset += Character.charCount(codePoint);
+            }
+            line.append(part);
+         }
+      }
+      if (!line.isEmpty()) lines.add(line.toString());
+      return lines.isEmpty() ? List.of("") : lines;
    }
 
    private void releaseAndPrepare(String duration) {
@@ -76,7 +136,7 @@ public final class PunishmentCorrectionScreen extends class_437 {
 
    private void addCenteredText(int y, class_2561 text, int maxWidth) {
       int width = Math.min(this.field_22793.method_27525(text), maxWidth);
-      this.method_37063(new class_7842(this.field_22789 / 2 - width / 2, y, width, 12, text, this.field_22793).method_73396(maxWidth));
+      this.method_37063(new class_7842(this.field_22789 / 2 - width / 2, y, width, 12, text, this.field_22793));
    }
 
    private void close() {
