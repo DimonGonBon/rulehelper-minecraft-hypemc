@@ -2,6 +2,8 @@ package ru.dmitry.rulehelper.chat;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import net.minecraft.class_1041;
 import net.minecraft.class_2561;
 import net.minecraft.class_310;
@@ -12,6 +14,8 @@ import net.minecraft.class_303.class_7590;
 import ru.dmitry.rulehelper.mixin.ChatHudAccessor;
 
 public final class ChatNameHitTest {
+   private static final Logger LOGGER = LoggerFactory.getLogger("RuleHelper/PunishmentClick");
+
    private ChatNameHitTest() {
    }
 
@@ -90,8 +94,13 @@ public final class ChatNameHitTest {
             break;
          }
       }
-      if (row < 0) return null;
+      if (row < 0) {
+         LOGGER.info("punishment click row miss: mouseY={}, top={}, scroll={}, visibleCount={}", mouseY, top, scroll, visibleCount);
+         return null;
+      }
       int clickedIndex = scroll + row;
+      String clickedLine = orderedLineText(((class_7590)lines.get(clickedIndex)).comp_896());
+      LOGGER.info("punishment click row={} index={} mouseX={} mouseY={} text={}", row, clickedIndex, mouseX, mouseY, clickedLine);
       // Match the row by Y only. Measuring the whole row as plain text can
       // reject clicks on its colored/bold components because their rendered width differs.
 
@@ -101,9 +110,12 @@ public final class ChatNameHitTest {
       // belong to earlier chat messages and could otherwise leak into the reason.
       int first = Math.max(scroll, clickedIndex - 6);
       int last = Math.min(scroll + visibleCount - 1, clickedIndex + 6);
+      boolean prefixFound = false;
       for (int prefixIndex = first; prefixIndex <= last; prefixIndex++) {
          String firstLine = orderedLineText(((class_7590)lines.get(prefixIndex)).comp_896()).stripLeading();
          if (!PunishmentAnnouncement.startsAnnouncement(firstLine)) continue;
+         prefixFound = true;
+         LOGGER.info("punishment prefix at index {}: {}", prefixIndex, firstLine);
          StringBuilder candidate = new StringBuilder(firstLine);
          for (int parts = 1; parts <= 7 && prefixIndex - (parts - 1) >= scroll; parts++) {
             int lastPart = prefixIndex - (parts - 1);
@@ -111,9 +123,14 @@ public final class ChatNameHitTest {
                candidate.append(' ').append(orderedLineText(((class_7590)lines.get(lastPart)).comp_896()));
             }
             PunishmentAnnouncement parsed = PunishmentAnnouncement.parse(candidate.toString());
-            if (parsed != null && clickedIndex >= lastPart && clickedIndex <= prefixIndex) return parsed;
+            LOGGER.info("punishment candidate parts={} parsed={}: {}", parts, parsed != null, candidate);
+            if (parsed != null && clickedIndex >= lastPart && clickedIndex <= prefixIndex) {
+               LOGGER.info("punishment matched issuer={} target={} kind={}", parsed.issuer(), parsed.target(), parsed.kind());
+               return parsed;
+            }
          }
       }
+      LOGGER.info("punishment scan found no match; prefixFound={}", prefixFound);
       return null;
    }
 
