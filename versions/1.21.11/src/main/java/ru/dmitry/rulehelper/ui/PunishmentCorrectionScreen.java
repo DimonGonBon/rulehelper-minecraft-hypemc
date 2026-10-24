@@ -1,7 +1,5 @@
 package ru.dmitry.rulehelper.ui;
 
-// Temporary CI trigger for test artifact generation.
-
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.class_124;
