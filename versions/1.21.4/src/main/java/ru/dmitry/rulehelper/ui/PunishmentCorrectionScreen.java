@@ -76,7 +76,7 @@ public final class PunishmentCorrectionScreen extends class_437 {
 
    private void addCenteredText(int y, class_2561 text, int maxWidth) {
       int width = Math.min(this.field_22793.method_27525(text), maxWidth);
-      this.method_37063(new class_7842(this.field_22789 / 2 - width / 2, y, width, 12, text, this.field_22793).method_73396(maxWidth));
+      this.method_37063(new class_7842(this.field_22789 / 2 - width / 2, y, width, 12, text, this.field_22793));
    }
 
    private void close() {
