@@ -1,5 +1,7 @@
 package ru.dmitry.rulehelper.chat;
 
+// Temporary CI trigger for test artifacts; do not merge this branch.
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
