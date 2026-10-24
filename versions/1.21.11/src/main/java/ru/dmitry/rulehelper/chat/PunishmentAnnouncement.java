@@ -11,12 +11,13 @@ public record PunishmentAnnouncement(Kind kind, String issuer, String target, St
       Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
    );
    private static final Pattern MODE = Pattern.compile("^(.*?)\\s*\\(([^()]*)\\)\\s*$");
+   private static final Pattern ANNOUNCEMENT_START = Pattern.compile("^❨[！!]❩\\s*Игрок\\s+");
 
    public enum Kind { BAN, MUTE }
 
    /** True when the visible announcement row has the expected prefix. */
    public static boolean startsAnnouncement(String text) {
-      return text != null && text.stripLeading().matches("^❨[！!]❩\\s*Игрок\\b.*");
+      return text != null && ANNOUNCEMENT_START.matcher(text.stripLeading()).find();
    }
 
    public static PunishmentAnnouncement parse(String text) {
