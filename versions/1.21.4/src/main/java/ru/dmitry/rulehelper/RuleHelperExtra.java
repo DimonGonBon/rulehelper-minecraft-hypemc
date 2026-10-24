@@ -59,4 +59,20 @@ public final class RuleHelperExtra {
          client.method_1507(null);
       }).method_46434(x, buttonY(screenHeight), width, 20).method_46431();
    }
+
+   public static class_4185 makeHistoryButton(String command, String target, int screenWidth, int screenHeight, int row) {
+      int width = Math.min(220, Math.max(140, screenWidth / 4 - 20));
+      int y = screenHeight / 2 - 23 + row * 26;
+      String label = command + " " + target;
+      return class_4185.method_46430(class_2561.method_43470(label), button -> {
+         class_310 client = class_310.method_1551();
+         if (client == null || client.method_1562() == null || !RuleHelperConfig.isConfigured()) {
+            return;
+         }
+         String scopedCommand = RuleHelperConfig.applyDonationScope(label);
+         client.method_1562().method_45730(scopedCommand.startsWith("/") ? scopedCommand.substring(1) : scopedCommand);
+         client.method_1507(null);
+      }).method_46434(12, y, width, 20).method_46431();
+   }
+
 }
