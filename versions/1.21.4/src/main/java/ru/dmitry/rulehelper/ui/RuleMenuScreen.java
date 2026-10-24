@@ -121,6 +121,8 @@ public final class RuleMenuScreen extends class_437 {
 
       this.method_37063(RuleHelperExtra.makeUnpunishButton(this.playerName, super.field_22789, super.field_22790));
       this.method_37063(RuleHelperExtra.makePexButton(this.playerName, super.field_22789, super.field_22790));
+      this.method_37063(RuleHelperExtra.makeHistoryButton("/hist", this.playerName, super.field_22789, super.field_22790, 0));
+      this.method_37063(RuleHelperExtra.makeHistoryButton("/shist", this.playerName, super.field_22789, super.field_22790, 1));
       this.addLeftText(this.field_22790 - 54, class_2561.method_43470("Ваш ник: " + (RuleHelperConfig.nickname().isBlank() ? "не указан" : RuleHelperConfig.nickname())));
       this.addLeftText(this.field_22790 - 40, class_2561.method_43470("Выбранный донат: " + (RuleHelperConfig.isConfigured() ? RuleHelperConfig.tierLabel() : "не выбран")));
       this.method_37063(class_4185.method_46430(
