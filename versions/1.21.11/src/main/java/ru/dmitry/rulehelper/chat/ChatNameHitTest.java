@@ -92,26 +92,31 @@ public final class ChatNameHitTest {
       }
       if (row < 0) return null;
       int clickedIndex = scroll + row;
-      // Match the row by Y only. Measuring the whole row as plain text can
-      // reject clicks on its colored/bold components because their rendered width differs.
 
-      // ChatHud stores wrapped lines from bottom to top. Start only at the exact
-      // announcement prefix, then append lower rows (smaller indices) until the
-      // whole sentence parses. Never append rows above the announcement: those
-      // belong to earlier chat messages and could otherwise leak into the reason.
+      // ChatHud stores wrapped lines bottom-to-top. Keep reconstruction inside
+      // the clicked entry: stop when its final wrapped line is reached, and
+      // never append text from the neighboring chat entry.
       int first = Math.max(scroll, clickedIndex - 6);
       int last = Math.min(scroll + visibleCount - 1, clickedIndex + 6);
       for (int prefixIndex = first; prefixIndex <= last; prefixIndex++) {
-         String firstLine = orderedLineText(((class_7590)lines.get(prefixIndex)).comp_896()).stripLeading();
+         class_7590 prefixLine = (class_7590)lines.get(prefixIndex);
+         String firstLine = orderedLineText(prefixLine.comp_896()).stripLeading();
          if (!PunishmentAnnouncement.startsAnnouncement(firstLine)) continue;
+         int entryTime = prefixLine.comp_895();
          StringBuilder candidate = new StringBuilder(firstLine);
          for (int parts = 1; parts <= 7 && prefixIndex - (parts - 1) >= scroll; parts++) {
             int lastPart = prefixIndex - (parts - 1);
+            class_7590 visibleLine = (class_7590)lines.get(lastPart);
+            if (visibleLine.comp_895() != entryTime) break;
             if (parts > 1) {
-               candidate.append(' ').append(orderedLineText(((class_7590)lines.get(lastPart)).comp_896()));
+               candidate.append(' ').append(orderedLineText(visibleLine.comp_896()));
             }
             PunishmentAnnouncement parsed = PunishmentAnnouncement.parse(candidate.toString());
             if (parsed != null && clickedIndex >= lastPart && clickedIndex <= prefixIndex) return parsed;
+            // endOfEntry marks the last wrapped row of this source message.
+            // Do not continue into an adjacent message, even if its text makes
+            // the punishment regex match.
+            if (visibleLine.comp_898()) break;
          }
       }
       return null;
