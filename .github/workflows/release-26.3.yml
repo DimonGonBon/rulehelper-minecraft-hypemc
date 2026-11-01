@@ -1,0 +1,52 @@
+name: Publish Minecraft 26.3
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  publish:
+    if: contains(github.event.head_commit.message, '[publish-26.3]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tested JAR
+        run: |
+          echo '29a5fed8fb98358b7562bb0b23e57170c72f44d5000a81561296aceff02ffe95  artifacts/RuleHelper-26.3-Fabric.jar' | sha256sum --check
+          unzip -t artifacts/RuleHelper-26.3-Fabric.jar
+      - name: Publish tested Minecraft 26.3 build
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { owner, repo } = context.repo;
+            const tag = 'v1.3.0-26.3';
+            const body = [
+              'Полный перенос RuleHelper на Minecraft Java Edition 26.3.',
+              '',
+              '- Требуется Fabric Loader 0.20.1+ и Java 25. Fabric API не требуется.',
+              '- Сохранены меню по нику, все правила, группы Правитель+ / Staff-, история наказаний, /dupeip, разбан/размут и /pex.',
+              '- Сохранён экран проверки наказаний и коррекция по правилу 3.4.',
+              '- Адаптированы ввод SDL, отрисовка экранов и работа с чатом Minecraft 26.3.',
+              '- Публикуется проверенная в игре первая сборка (внутренняя версия 1.3.0-test.1), без изменений бинарного файла.',
+              '',
+              'Файл: RuleHelper-26.3-Fabric.jar. Перед установкой удалите старый RuleHelper из mods.',
+              'Сборки для 1.21.11 и 1.21.4 доступны в релизе v1.2.1.',
+            ].join('\n');
+            let release;
+            try {
+              release = (await github.rest.repos.getReleaseByTag({owner, repo, tag})).data;
+              release = (await github.rest.repos.updateRelease({owner, repo, release_id:release.id, name:'RuleHelper — Minecraft 26.3', body, draft:false, prerelease:false, make_latest:'true'})).data;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              release = (await github.rest.repos.createRelease({owner, repo, tag_name:tag, target_commitish:context.sha, name:'RuleHelper — Minecraft 26.3', body, draft:false, prerelease:false, make_latest:'true'})).data;
+            }
+            const name = 'RuleHelper-26.3-Fabric.jar';
+            const data = fs.readFileSync(`artifacts/${name}`);
+            const assets = (await github.rest.repos.listReleaseAssets({owner, repo, release_id:release.id, per_page:100})).data;
+            for (const asset of assets.filter(a => a.name === name)) {
+              await github.rest.repos.deleteReleaseAsset({owner, repo, asset_id:asset.id});
+            }
+            await github.rest.repos.uploadReleaseAsset({owner, repo, release_id:release.id, name, data, headers:{'content-type':'application/java-archive', 'content-length':data.length}});
