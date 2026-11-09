@@ -125,6 +125,7 @@ public final class RuleMenuScreen extends Screen {
       this.addRenderableWidget(RuleHelperExtra.makePlayerCommandButton("/hist", this.playerName, super.width, super.height, 0));
       this.addRenderableWidget(RuleHelperExtra.makePlayerCommandButton("/shist", this.playerName, super.width, super.height, 1));
       this.addRenderableWidget(RuleHelperExtra.makePlayerCommandButton("/dupeip", this.playerName, super.width, super.height, 2));
+      this.addRenderableWidget(RuleHelperExtra.makeCopyNameButton(this.playerName, super.width, super.height, 12));
       this.addLeftText(this.height - 54, Component.literal("Ваш ник: " + (RuleHelperConfig.nickname().isBlank() ? "не указан" : RuleHelperConfig.nickname())));
       this.addLeftText(this.height - 40, Component.literal("Выбранный донат: " + (RuleHelperConfig.isConfigured() ? RuleHelperConfig.tierLabel() : "не выбран")));
       this.addRenderableWidget(Button.builder(

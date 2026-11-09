@@ -75,4 +75,15 @@ public final class RuleHelperExtra {
       }).bounds(12, y, width, 20).build();
    }
 
+   public static Button makeCopyNameButton(String target, int screenWidth, int screenHeight, int x) {
+      int width = Math.min(164, Math.max(110, screenWidth / 4 - 12));
+      return Button.builder(Component.literal("Копировать ник"), button -> {
+         Minecraft client = Minecraft.getInstance();
+         if (client == null) return;
+         client.keyboardHandler.setClipboard(target);
+         client.gui.hud.getChat().addClientSystemMessage(Component.literal("Скопирован ник: " + target));
+         client.gui.setScreen(null);
+      }).bounds(x, buttonY(screenHeight), width, 20).build();
+   }
+
 }
