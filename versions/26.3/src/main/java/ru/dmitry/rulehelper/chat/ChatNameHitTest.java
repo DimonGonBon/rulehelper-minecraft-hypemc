@@ -1,5 +1,7 @@
 package ru.dmitry.rulehelper.chat;
 
+import ru.dmitry.rulehelper.PlayerNames;
+
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -96,7 +98,7 @@ public final class ChatNameHitTest {
          }
 
          String var14 = var10.toString();
-         return var14.matches("[A-Za-z0-9_]{3,16}") ? var14 : null;
+         return PlayerNames.isValid(var14) ? var14 : null;
       } else {
          return null;
       }
@@ -108,7 +110,7 @@ public final class ChatNameHitTest {
       }
 
       int var1 = var0.codePointAt(0);
-      return var1 >= 65 && var1 <= 90 || var1 >= 97 && var1 <= 122 || var1 >= 48 && var1 <= 57 || var1 == 95;
+      return Character.isLetterOrDigit(var1) || var1 == 95;
    }
 
    private record Glyph(String text, int start, int end, boolean clickable) {

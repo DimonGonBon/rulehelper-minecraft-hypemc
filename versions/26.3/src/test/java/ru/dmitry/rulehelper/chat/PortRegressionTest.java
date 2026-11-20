@@ -1,7 +1,15 @@
 package ru.dmitry.rulehelper.chat;
 
+import ru.dmitry.rulehelper.RuleCatalog;
+import ru.dmitry.rulehelper.PlayerNames;
+
 public final class PortRegressionTest {
    public static void main(String[] args) {
+      require(RuleCatalog.ALL.size() == 26, "Donor menu should include 26 rules");
+      require(RuleCatalog.ALL.stream().noneMatch(rule -> rule.code().equals("1.3") || rule.code().equals("4.1")),
+         "Rules 1.3 and 4.1 are excluded from donor build");
+      require(RuleCatalog.ALL.stream().allMatch(rule -> !rule.actions().isEmpty()),
+         "Every donor-visible rule has at least one punishment choice");
       int clicks = 0;
       for (int height : new int[]{240, 360, 480, 720}) {
          for (float scale : new float[]{0.25f, 0.5f, 0.75f, 1.0f}) {
@@ -27,6 +35,8 @@ public final class PortRegressionTest {
       require(mute != null && mute.kind() == PunishmentAnnouncement.Kind.MUTE, "Mute");
       require(PunishmentAnnouncement.parse("Ⓖ ArsenyNovikov ⇨ привет") == null, "Adjacent player message");
       require(PunishmentAnnouncement.parse("Player123 ⇨ ❨！❩ Игрок Moderator забанил Player456 на 6 часов по причине: 3.4") == null, "Player-spoofed prefix");
+      require(PlayerNames.isValid("Русский") && PlayerNames.isValid("Игрок_123"), "Accept Cyrillic player names");
+      require(!PlayerNames.isValid("ab") && !PlayerNames.isValid("ник-123"), "Reject too-short or unsupported player names");
       System.out.println("PASS: " + clicks + " chat row clicks and punishment parser checks");
    }
    private static void require(boolean value, String message) {

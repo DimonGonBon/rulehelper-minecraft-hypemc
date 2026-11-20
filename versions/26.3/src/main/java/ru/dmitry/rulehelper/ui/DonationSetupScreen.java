@@ -8,6 +8,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.StringWidget;
 import ru.dmitry.rulehelper.RuleHelperConfig;
+import ru.dmitry.rulehelper.PlayerNames;
 import ru.dmitry.rulehelper.RuleHelperConfig.DonationTier;
 
 /** First-use setup: save the user's own server nickname and declared tier. */
@@ -30,7 +31,7 @@ public final class DonationSetupScreen extends Screen {
          this.nicknameInput.setValue(RuleHelperConfig.nickname());
       }
       this.addRenderableWidget(this.nicknameInput);
-      this.addCenteredText(91, Component.literal("Ник: 3–16 символов, латинские буквы, цифры и _"), Math.min(this.width - 24, 540));
+      this.addCenteredText(91, Component.literal("Ник: 3–16 букв, цифр или _"), Math.min(this.width - 24, 540));
       this.addCenteredText(117, Component.literal("Выбирайте только свой уровень доната." ).withStyle(ChatFormatting.YELLOW), Math.min(this.width - 24, 520));
       this.addCenteredText(132, Component.literal("Выбор чужого уровня нарушает правило 3.4 и может привести к наказанию.").withStyle(ChatFormatting.YELLOW), Math.min(this.width - 24, 620));
       this.addCenteredText(165, Component.literal("Какой у вас донат?"), Math.min(this.width - 24, 320));
@@ -44,7 +45,7 @@ public final class DonationSetupScreen extends Screen {
 
    private void save(DonationTier selectedTier) {
       String nickname = this.nicknameInput.getValue().trim();
-      if (!nickname.matches("[A-Za-z0-9_]{3,16}")) {
+      if (!PlayerNames.isValid(nickname)) {
          return;
       }
       RuleHelperConfig.save(nickname, selectedTier);

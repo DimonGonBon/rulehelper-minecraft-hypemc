@@ -45,21 +45,6 @@ public final class RuleHelperExtra {
       return var4.bounds(var5, buttonY(var2), var3, 20).build();
    }
 
-   public static Button makePexButton(String target, int screenWidth, int screenHeight) {
-      int width = buttonWidth(screenWidth);
-      int x = screenWidth / 2 - width - 4;
-      String label = "/pex user " + target;
-      return Button.builder(Component.literal(label), button -> {
-         Minecraft client = Minecraft.getInstance();
-         if (client == null || client.getConnection() == null || !RuleHelperConfig.isConfigured()) {
-            return;
-         }
-         client.getConnection().sendCommand("op " + RuleHelperConfig.nickname());
-         client.getConnection().sendCommand("pex user " + target);
-         client.gui.setScreen(null);
-      }).bounds(x, buttonY(screenHeight), width, 20).build();
-   }
-
    public static Button makePlayerCommandButton(String command, String target, int screenWidth, int screenHeight, int row) {
       int width = Math.min(220, Math.max(140, screenWidth / 4 - 20));
       int y = screenHeight / 2 - 36 + row * 26;
