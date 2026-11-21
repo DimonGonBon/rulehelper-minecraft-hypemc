@@ -31,7 +31,7 @@ public final class DonationSetupScreen extends Screen {
          this.nicknameInput.setValue(RuleHelperConfig.nickname());
       }
       this.addRenderableWidget(this.nicknameInput);
-      this.addCenteredText(91, Component.literal("Ник: 3–16 букв, цифр или _"), Math.min(this.width - 24, 540));
+      this.addCenteredText(91, Component.literal("Ник: 3–16 латинских букв, цифр и _"), Math.min(this.width - 24, 540));
       this.addCenteredText(117, Component.literal("Выбирайте только свой уровень доната." ).withStyle(ChatFormatting.YELLOW), Math.min(this.width - 24, 520));
       this.addCenteredText(132, Component.literal("Выбор чужого уровня нарушает правило 3.4 и может привести к наказанию.").withStyle(ChatFormatting.YELLOW), Math.min(this.width - 24, 620));
       this.addCenteredText(165, Component.literal("Какой у вас донат?"), Math.min(this.width - 24, 320));

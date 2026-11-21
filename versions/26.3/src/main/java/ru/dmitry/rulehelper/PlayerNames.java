@@ -1,13 +1,17 @@
 package ru.dmitry.rulehelper;
 
-/** Shared validation for server names that may contain Latin or Cyrillic letters. */
+/** Nickname constraints used by clickable chat selection and the saved profile. */
 public final class PlayerNames {
    private PlayerNames() {}
 
    public static boolean isValid(String name) {
       if (name == null) return false;
-      int length = name.codePointCount(0, name.length());
+      int length = name.length();
       if (length < 3 || length > 16) return false;
-      return name.codePoints().allMatch(codePoint -> codePoint == '_' || Character.isLetterOrDigit(codePoint));
+      for (int i = 0; i < length; i++) {
+         char c = name.charAt(i);
+         if (!(c == '_' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9')) return false;
+      }
+      return true;
    }
 }

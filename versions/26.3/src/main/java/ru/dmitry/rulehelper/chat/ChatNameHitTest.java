@@ -110,7 +110,7 @@ public final class ChatNameHitTest {
       }
 
       int var1 = var0.codePointAt(0);
-      return Character.isLetterOrDigit(var1) || var1 == 95;
+      return var1 >= 65 && var1 <= 90 || var1 >= 97 && var1 <= 122 || var1 >= 48 && var1 <= 57 || var1 == 95;
    }
 
    private record Glyph(String text, int start, int end, boolean clickable) {

@@ -35,8 +35,8 @@ public final class PortRegressionTest {
       require(mute != null && mute.kind() == PunishmentAnnouncement.Kind.MUTE, "Mute");
       require(PunishmentAnnouncement.parse("Ⓖ ArsenyNovikov ⇨ привет") == null, "Adjacent player message");
       require(PunishmentAnnouncement.parse("Player123 ⇨ ❨！❩ Игрок Moderator забанил Player456 на 6 часов по причине: 3.4") == null, "Player-spoofed prefix");
-      require(PlayerNames.isValid("Русский") && PlayerNames.isValid("Игрок_123"), "Accept Cyrillic player names");
-      require(!PlayerNames.isValid("ab") && !PlayerNames.isValid("ник-123"), "Reject too-short or unsupported player names");
+      require(PlayerNames.isValid("Player_123") && !PlayerNames.isValid("Русский"), "Chat/profile names remain Latin-only");
+      require(!PlayerNames.isValid("ab") && !PlayerNames.isValid("nick-123"), "Reject too-short or unsupported chat/profile names");
       System.out.println("PASS: " + clicks + " chat row clicks and punishment parser checks");
    }
    private static void require(boolean value, String message) {
