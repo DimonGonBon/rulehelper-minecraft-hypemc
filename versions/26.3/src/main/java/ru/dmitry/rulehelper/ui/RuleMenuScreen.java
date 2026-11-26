@@ -5,7 +5,6 @@ import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.components.Tooltip;
@@ -16,41 +15,28 @@ import ru.dmitry.rulehelper.RuleAction;
 import ru.dmitry.rulehelper.RuleCatalog;
 import ru.dmitry.rulehelper.RuleEntry;
 import ru.dmitry.rulehelper.RuleHelperConfig;
+import ru.dmitry.rulehelper.PunishmentScope;
+import ru.dmitry.rulehelper.PunishmentScope;
 
-/** Three-column moderation menu: category, rule list, and selected rule actions. */
+/** Compact, translucent rule picker for a selected player. */
 public final class RuleMenuScreen extends Screen {
    private static final int[] GROUPS = {0, 1, 2, 3, 4, 5};
-   private static final String[] GROUP_NAMES = {"Все", "1 · Общие", "2 · Общение", "3 · Игровые", "4 · Выживание", "5 · Мини-игры"};
    private static final int[] GROUP_COUNTS = {26, 7, 6, 6, 4, 3};
+   private static final String[] GROUP_NAMES = {"Все", "1 · Общие", "2 · Чат", "3 · Игровые", "4 · Выживание", "5 · Мини-игры"};
    private final String playerName;
    private final Screen returnTo;
    private int selectedGroup;
    private int firstRow;
    private boolean keepSelectionVisible = true;
-   private String selectedRuleCode = "3.4";
+   private String selectedRuleCode = "1.1";
    private String searchText = "";
+   private int panelX, panelY, panelWidth, panelHeight;
+   private int listX, listY, listWidth, detailX, detailWidth, rowPitch, visibleRuleRows;
    private EditBox searchBox;
-   private int panelTop;
-   private int panelBottom;
-   private int leftX;
-   private int leftWidth;
-   private int listX;
-   private int listWidth;
-   private int detailX;
-   private int detailWidth;
-   private int listTop;
-   private int rowPitch;
-   private int visibleRuleRows;
    private List<RuleEntry> visibleRules = List.of();
 
-   public RuleMenuScreen(String playerName) {
-      this(playerName, 0, 0, null);
-   }
-
-   public RuleMenuScreen(String playerName, int firstRow, Screen returnTo) {
-      this(playerName, firstRow, 0, returnTo);
-   }
-
+   public RuleMenuScreen(String playerName) { this(playerName, 0, 0, null); }
+   public RuleMenuScreen(String playerName, int firstRow, Screen returnTo) { this(playerName, firstRow, 0, returnTo); }
    private RuleMenuScreen(String playerName, int firstRow, int selectedGroup, Screen returnTo) {
       super(Component.literal("Наказание игрока"));
       this.playerName = playerName;
@@ -62,87 +48,59 @@ public final class RuleMenuScreen extends Screen {
    @Override
    protected void init() {
       this.computeLayout();
-      this.addCentered(10, Component.literal("RULE HELPER · НАКАЗАНИЕ ИГРОКА")
-         .withStyle(new ChatFormatting[]{ChatFormatting.AQUA, ChatFormatting.BOLD}), Math.min(this.width - 60, 420));
+      this.addHeaderTitle(this.panelX + 16, this.panelY + 12,
+         Component.literal("RULE HELPER · НАКАЗАНИЕ ИГРОКА").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), this.panelWidth - 330);
+      this.addText(this.panelX + this.panelWidth - 190, this.panelY + 13, "Игрок: " + this.playerName,
+         ChatFormatting.YELLOW, 12, 158);
+      this.addRenderableWidget(new BlueButton(this.panelX + this.panelWidth - 320, this.panelY + 8, 122, 21,
+         Component.literal("Причина · " + RuleHelperConfig.causeStyle().label()),
+         b -> this.minecraft.gui.setScreen(new CauseStyleScreen(this))));
 
-      int styleWidth = Math.min(155, Math.max(112, this.width / 5));
-      int styleX = this.width - 12 - styleWidth;
-      int playerLabelX = 25;
-      String playerCaption = "ВЫБРАННЫЙ ИГРОК";
-      this.addRenderableWidget(new StringWidget(playerLabelX, 40, this.font.width(playerCaption), 12,
-         Component.literal(playerCaption).withStyle(new ChatFormatting[]{ChatFormatting.AQUA, ChatFormatting.BOLD}), this.font));
-      int nameX = playerLabelX + this.font.width(playerCaption) + 12;
-      int nameWidth = Math.max(40, styleX - nameX - 10);
-      StringWidget selectedPlayer = new StringWidget(nameX, 38, nameWidth, 16,
-         Component.literal(this.playerName).withStyle(new ChatFormatting[]{ChatFormatting.YELLOW, ChatFormatting.BOLD}), this.font);
-      selectedPlayer.setMaxWidth(nameWidth);
-      this.addRenderableWidget(selectedPlayer);
-      this.addRenderableWidget(Button.builder(Component.literal("Причина: " + RuleHelperConfig.causeStyle().label()),
-         b -> this.minecraft.gui.setScreen(new CauseStyleScreen(this)))
-         .bounds(styleX, 35, styleWidth, 20).build());
-
-      this.buildCategoryPanel();
-      this.buildRuleList();
-      this.buildSelectedRulePanel();
-      this.buildQuickActions();
-   }
-
-   private void computeLayout() {
-      this.panelTop = 66;
-      this.panelBottom = Math.max(this.panelTop + 120, this.height - 103);
-      this.leftX = 12;
-      this.leftWidth = Math.min(150, Math.max(106, (int)(this.width * 0.18)));
-      this.detailWidth = Math.min(264, Math.max(174, (int)(this.width * 0.29)));
-      int gap = 8;
-      int usable = this.width - 24 - gap * 2;
-      if (this.leftWidth + this.detailWidth > usable - 175) {
-         this.leftWidth = Math.max(96, usable / 5);
-         this.detailWidth = Math.max(164, usable / 3);
-      }
-      this.listX = this.leftX + this.leftWidth + gap;
-      this.listWidth = Math.max(164, this.width - 12 - this.detailWidth - gap - this.listX);
-      this.detailX = this.listX + this.listWidth + gap;
-      this.detailWidth = Math.max(140, this.width - 12 - this.detailX);
-      this.listTop = this.panelTop + 60;
-      this.rowPitch = 27;
-      this.visibleRuleRows = Math.max(1, (this.panelBottom - this.listTop - 8) / this.rowPitch);
-   }
-
-   private void buildCategoryPanel() {
-      this.addText(this.leftX + 12, this.panelTop + 10, "РАЗДЕЛЫ", ChatFormatting.GRAY, 12, this.leftWidth - 24);
+      int groupY = this.panelY + 49;
+      int gap = 4;
+      int tabWidth = (this.panelWidth - 28 - gap * 5) / 6;
       for (int i = 0; i < GROUPS.length; i++) {
-         int group = GROUPS[i];
-         String name = shortGroupName(i) + " · " + GROUP_COUNTS[i];
-         Component label = Component.literal(name).withStyle(group == this.selectedGroup
+         final int group = GROUPS[i];
+         String label = (i == 0 ? "Все" : GROUP_NAMES[i]) + " · " + GROUP_COUNTS[i];
+         Component text = Component.literal(label).withStyle(this.selectedGroup == group
             ? new ChatFormatting[]{ChatFormatting.AQUA, ChatFormatting.BOLD} : new ChatFormatting[]{ChatFormatting.WHITE});
-         int y = this.panelTop + 30 + i * 28;
-         this.addRenderableWidget(Button.builder(label, b -> {
+         this.addRenderableWidget(new BlueButton(this.panelX + 14 + i * (tabWidth + gap), groupY, tabWidth, 20, text, b -> {
             this.selectedGroup = group;
             this.firstRow = 0;
             this.selectFirstVisibleRule();
             this.keepSelectionVisible = true;
             this.rebuildWidgets();
-         }).bounds(this.leftX + 8, y, this.leftWidth - 16, 22).build());
+         }));
       }
-      this.addWrapped("Выбери раздел, затем правило.", this.leftX + 10,
-         this.panelTop + 30 + GROUPS.length * 28 + 8, this.leftWidth - 20, ChatFormatting.GRAY, 11, 3);
+
+      this.buildRuleList();
+      this.buildSelectedRulePanel();
+      this.buildQuickActions();
+      this.addRenderableWidget(new BlueButton(this.panelX + this.panelWidth - 28, this.panelY + 7, 20, 18,
+         Component.literal("×"), b -> this.onClose()).withTooltip(Tooltip.create(Component.literal("Закрыть"))));
    }
 
-   private String shortGroupName(int index) {
-      return switch (index) {
-         case 1 -> "1 · Общие";
-         case 2 -> "2 · Чат";
-         case 3 -> "3 · Игровые";
-         case 4 -> "4 · Выживание";
-         case 5 -> "5 · Мини-игры";
-         default -> "Все правила";
-      };
+   private void computeLayout() {
+      this.panelWidth = Math.min(760, Math.max(480, this.width - 24));
+      this.panelHeight = Math.min(440, Math.max(300, this.height - 24));
+      this.panelWidth = Math.min(this.panelWidth, this.width - 12);
+      this.panelHeight = Math.min(this.panelHeight, this.height - 12);
+      this.panelX = (this.width - this.panelWidth) / 2;
+      this.panelY = (this.height - this.panelHeight) / 2;
+      int innerWidth = this.panelWidth - 36;
+      this.listX = this.panelX + 12;
+      this.listWidth = Math.max(180, (int)(innerWidth * 0.43));
+      this.detailX = this.listX + this.listWidth + 10;
+      this.detailWidth = this.panelX + this.panelWidth - 12 - this.detailX;
+      this.listY = this.panelY + 105;
+      this.rowPitch = 25;
+      this.visibleRuleRows = Math.max(1, (this.panelY + this.panelHeight - 46 - this.listY) / this.rowPitch);
    }
 
    private void buildRuleList() {
-      this.addText(this.listX + 12, this.panelTop + 10, "ПУНКТЫ ПРАВИЛ", ChatFormatting.GRAY, 12, this.listWidth - 24);
-      this.searchBox = new EditBox(this.font, this.listX + 10, this.panelTop + 28,
-         this.listWidth - 20, 20, Component.literal("Поиск правила"));
+      this.addText(this.listX + 5, this.panelY + 75, "ПРАВИЛА", ChatFormatting.GRAY, 11, this.listWidth - 10);
+      this.searchBox = new EditBox(this.font, this.listX + 2, this.panelY + 84,
+         this.listWidth - 4, 18, Component.literal("Поиск правила"));
       this.searchBox.setMaxLength(64);
       this.searchBox.setValue(this.searchText);
       this.searchBox.setResponder(value -> {
@@ -151,8 +109,10 @@ public final class RuleMenuScreen extends Screen {
          this.selectFirstVisibleRule();
          this.keepSelectionVisible = true;
          this.rebuildWidgets();
-         this.searchBox.setCursorPosition(this.searchText.length());
-         this.setFocused(this.searchBox);
+         if (this.searchBox != null) {
+            this.searchBox.setCursorPosition(this.searchText.length());
+            this.setFocused(this.searchBox);
+         }
       });
       this.addRenderableWidget(this.searchBox);
 
@@ -161,132 +121,170 @@ public final class RuleMenuScreen extends Screen {
       int selectedIndex = this.indexOfSelected(filtered);
       if (this.keepSelectionVisible && selectedIndex >= 0
          && (selectedIndex < this.firstRow || selectedIndex >= this.firstRow + this.visibleRuleRows)) {
-         this.firstRow = Math.max(0, selectedIndex - Math.max(0, this.visibleRuleRows / 2));
+         this.firstRow = Math.max(0, selectedIndex - this.visibleRuleRows / 2);
       }
       this.keepSelectionVisible = false;
       int end = Math.min(filtered.size(), this.firstRow + this.visibleRuleRows);
       this.visibleRules = filtered.subList(this.firstRow, end);
-      int rowY = this.listTop;
-      for (int index = 0; index < this.visibleRules.size(); index++) {
-         RuleEntry rule = this.visibleRules.get(index);
-         int y = rowY + index * this.rowPitch;
-         ChatFormatting codeColor = this.codeColor(rule.code());
-         MutableComponent label = Component.literal(rule.code())
-            .withStyle(new ChatFormatting[]{codeColor, ChatFormatting.BOLD})
-            .append(Component.literal("   " + rule.title()).withStyle(rule.code().equals(this.selectedRuleCode)
-               ? new ChatFormatting[]{ChatFormatting.AQUA, ChatFormatting.BOLD} : new ChatFormatting[]{ChatFormatting.WHITE}));
-         this.addRenderableWidget(Button.builder(label, b -> {
+      for (int i = 0; i < this.visibleRules.size(); i++) {
+         RuleEntry rule = this.visibleRules.get(i);
+         int y = this.listY + i * this.rowPitch;
+         int buttonX = this.listX + 2;
+         int buttonWidth = this.listWidth - 4;
+         int numberColumnWidth = Math.min(52, Math.max(38, buttonWidth / 7));
+         int titleX = buttonX + numberColumnWidth;
+         int titleAreaWidth = buttonWidth - numberColumnWidth - 10;
+         String title = this.fitText(this.listTitle(rule), titleAreaWidth - 12);
+         this.addRenderableWidget(new BlueButton(buttonX, y, buttonWidth, 22, Component.empty(), b -> {
             this.selectedRuleCode = rule.code();
-            this.keepSelectionVisible = true;
             this.rebuildWidgets();
-         }).bounds(this.listX + 8, y, this.listWidth - 16, 23)
-            .tooltip(Tooltip.create(this.tooltipFor(rule))).build());
+         }).withTooltip(Tooltip.create(this.tooltipFor(rule))));
+         Component number = Component.literal(rule.code()).withStyle(this.codeColor(rule.code()), ChatFormatting.BOLD);
+         int numberWidth = this.font.width(number);
+         StringWidget numberWidget = new StringWidget(buttonX + (numberColumnWidth - numberWidth) / 2, y + 5,
+            numberWidth, 12, number, this.font);
+         numberWidget.setMaxWidth(numberWidth);
+         this.addRenderableWidget(numberWidget);
+         Component titleComponent = Component.literal(title).withStyle(rule.code().equals(this.selectedRuleCode)
+            ? new ChatFormatting[]{ChatFormatting.AQUA, ChatFormatting.BOLD}
+            : new ChatFormatting[]{ChatFormatting.WHITE, ChatFormatting.BOLD});
+         int fittedTitleWidth = this.font.width(titleComponent);
+         StringWidget titleWidget = new StringWidget(titleX + Math.max(0, (titleAreaWidth - fittedTitleWidth) / 2), y + 5,
+            fittedTitleWidth, 12, titleComponent, this.font);
+         titleWidget.setMaxWidth(fittedTitleWidth);
+         this.addRenderableWidget(titleWidget);
       }
-      if (filtered.isEmpty()) {
-         this.addText(this.listX + 14, this.listTop + 8, "Правила не найдены", ChatFormatting.GRAY, 12, this.listWidth - 28);
-      }
+      if (filtered.isEmpty()) this.addText(this.listX + 8, this.listY + 8, "Правила не найдены", ChatFormatting.GRAY, 12, this.listWidth - 16);
+   }
+
+   private String fitText(String value, int maxWidth) {
+      if (this.font.width(Component.literal(value).withStyle(ChatFormatting.BOLD)) <= maxWidth) return value;
+      String ellipsis = "…";
+      int end = value.length();
+      while (end > 0 && this.font.width(Component.literal(value.substring(0, end) + ellipsis)
+         .withStyle(ChatFormatting.BOLD)) > maxWidth) end--;
+      return end == 0 ? ellipsis : value.substring(0, end).stripTrailing() + ellipsis;
+   }
+
+   private String listTitle(RuleEntry rule) {
+      return switch (rule.code()) {
+         case "2.6" -> "Оскорбление проекта или оф. команды";
+         default -> rule.title();
+      };
    }
 
    private void buildSelectedRulePanel() {
-      this.addText(this.detailX + 12, this.panelTop + 10, "ВЫБРАННОЕ ПРАВИЛО", ChatFormatting.GRAY, 12, this.detailWidth - 24);
+      this.addText(this.detailX + 8, this.panelY + 75, "ВЫБРАННОЕ ПРАВИЛО", ChatFormatting.GRAY, 11, this.detailWidth - 16);
       RuleEntry selected = this.selectedRule();
       if (selected == null) {
-         this.addWrapped("Выбери правило в списке, чтобы увидеть пояснение и доступные варианты наказания.",
-            this.detailX + 12, this.panelTop + 36, this.detailWidth - 24, ChatFormatting.GRAY, 12, 7);
+         this.addWrapped("Выбери правило, чтобы увидеть описание и действия.", this.detailX + 8,
+            this.panelY + 101, this.detailWidth - 16, ChatFormatting.GRAY, 12, 5);
          return;
       }
-
-      this.addText(this.detailX + 12, this.panelTop + 32, selected.code(), this.codeColor(selected.code()), 20, 38);
-      int titleX = this.detailX + 55;
-      int titleWidth = this.detailWidth - 67;
-      int titleY = this.panelTop + 31;
-      int nextY = this.addWrapped(selected.title(), titleX, titleY, titleWidth, ChatFormatting.WHITE, 13, 2);
-      int summaryY = Math.max(this.panelTop + 62, nextY + 6);
-      int afterSummary = this.addWrapped(selected.summary(), this.detailX + 12, summaryY,
-         this.detailWidth - 24, ChatFormatting.GRAY, 11, 5);
-      int punishmentY = afterSummary + 4;
-      this.addText(this.detailX + 12, punishmentY, "НАКАЗАНИЕ", ChatFormatting.GOLD, 11, this.detailWidth - 24);
-      int afterPunishment = this.addWrapped(selected.punishment(), this.detailX + 12, punishmentY + 14,
-         this.detailWidth - 24, ChatFormatting.YELLOW, 11, 3);
-      int actionY = afterPunishment + 8;
-      this.addText(this.detailX + 12, actionY, "ВАРИАНТЫ", ChatFormatting.GRAY, 11, this.detailWidth - 24);
-      actionY += 17;
-      for (RuleAction action : selected.actions()) {
-         if (actionY + 20 > this.panelBottom - 8) break;
-         String command = RuleHelperConfig.formatCause(action.commandFor(this.playerName), selected.code(), selected.title());
-         command = RuleHelperConfig.applyDonationScope(command, selected.code());
-         this.addRenderableWidget(Button.builder(Component.literal(action.label()).withStyle(ChatFormatting.WHITE), b -> this.execute(selected, action))
-            .bounds(this.detailX + 8, actionY, this.detailWidth - 16, 20)
-            .tooltip(Tooltip.create(Component.literal(command).withStyle(ChatFormatting.AQUA)))
-            .build());
-         actionY += 23;
+      this.addText(this.detailX + 8, this.panelY + 94, selected.code(), this.codeColor(selected.code()), 18, 38);
+      int titleEnd = this.addWrapped(selected.title(), this.detailX + 50, this.panelY + 94,
+         this.detailWidth - 58, ChatFormatting.WHITE, 13, 2);
+      int descY = Math.max(this.panelY + 121, titleEnd + 5);
+      int descEnd = this.addWrapped(selected.summary(), this.detailX + 8, descY,
+         this.detailWidth - 16, ChatFormatting.GRAY, 12, 5);
+      int punishmentY = descEnd + 3;
+      this.addText(this.detailX + 8, punishmentY, "НАКАЗАНИЕ", ChatFormatting.GOLD, 11, this.detailWidth - 16);
+      int actionY = this.addWrapped(selected.punishment(), this.detailX + 8, punishmentY + 12,
+         this.detailWidth - 16, ChatFormatting.YELLOW, 11, 2) + 4;
+      this.addText(this.detailX + 8, actionY, "ДЕЙСТВИЯ", ChatFormatting.AQUA, 11, this.detailWidth - 16);
+      actionY += 14;
+      int actionLimit = this.panelY + this.panelHeight - 42;
+      int count = selected.actions().size();
+      int columns = Math.min(4, count);
+      int gap = 4;
+      int buttonWidth = (this.detailWidth - 8 - gap * (columns - 1)) / columns;
+      for (int i = 0; i < count; i++) {
+         RuleAction action = selected.actions().get(i);
+         int buttonY = actionY + (i / columns) * 24;
+         if (buttonY + 20 > actionLimit) break;
+         int buttonX = this.detailX + 4 + (i % columns) * (buttonWidth + gap);
+         String command = this.commandFor(selected, action);
+         this.addRenderableWidget(new BlueButton(buttonX, buttonY, buttonWidth, 20,
+            Component.literal(this.compactActionLabel(selected.code(), i, action.label())),
+            b -> this.selectAction(selected, action))
+            .withTooltip(Tooltip.create(Component.literal(command).withStyle(ChatFormatting.AQUA))));
       }
    }
 
    private void buildQuickActions() {
       int gap = 6;
-      int width = Math.max(110, (this.width - 24 - gap * 2) / 3);
-      int x0 = (this.width - (width * 3 + gap * 2)) / 2;
-      int y1 = this.height - 77;
-      int y2 = this.height - 51;
-      this.quickButton("Копировать ник", x0, y1, width, () -> {
-         Minecraft client = Minecraft.getInstance();
-         if (client != null) {
-            client.keyboardHandler.setClipboard(this.playerName);
-            client.gui.hud.getChat().addClientSystemMessage(Component.literal("Скопирован ник: " + this.playerName));
-            client.gui.setScreen(null);
-         }
-      });
-      this.quickButton("/shist " + this.playerName, x0 + (width + gap) * 2, y1, width,
-         () -> this.runPlayerCommand("/shist"));
-      this.quickButton("/dupeip " + this.playerName, x0, y2, width,
+      int width = (this.panelWidth - 36 - gap * 2) / 3;
+      int x = this.panelX + 12;
+      int y = this.panelY + this.panelHeight - 31;
+      this.actionButton("Узнать аккаунты игрока", "/dupeip " + this.playerName, x, y, width,
          () -> this.runPlayerCommand("/dupeip"));
-      this.quickButton("/hist " + this.playerName, x0 + width + gap, y2, width,
-         () -> this.runPlayerCommand("/hist"));
-      this.quickButton("Разбан / размут", x0 + (width + gap) * 2, y2, width,
+      this.actionButton("Снятие наказания", "/unban или /unmute", x + width + gap, y, width,
          this::openReleaseMenu);
-
-      int footerY = this.height - 22;
-      this.addRenderableWidget(Button.builder(Component.literal("Изменить"), b ->
-         this.minecraft.gui.setScreen(new DonationSetupScreen(this.playerName)))
-         .bounds(12, footerY - 2, 78, 19).build());
-      String profile = "Ваш ник: " + (RuleHelperConfig.nickname().isBlank() ? "не указан" : RuleHelperConfig.nickname())
-         + "   ·   Выбранный донат: " + (RuleHelperConfig.isConfigured() ? RuleHelperConfig.tierLabel() : "не выбран");
-      this.addText(98, footerY + 2, profile, ChatFormatting.GRAY, 11, Math.max(80, this.width - 208));
-      if (this.returnTo != null) {
-         this.quickButton("← Назад", this.width - 184, footerY - 2, 78, () -> this.minecraft.gui.setScreen(this.returnTo));
-         this.quickButton("Закрыть", this.width - 96, footerY - 2, 84, this::onClose);
-      } else {
-         this.quickButton("Закрыть", this.width - 96, footerY - 2, 84, this::onClose);
-      }
+      this.actionButton("Узнать донат игрока", "/pex user " + this.playerName, x + (width + gap) * 2, y, width,
+         () -> {
+            if (this.minecraft != null && this.minecraft.getConnection() != null && RuleHelperConfig.isConfigured()) {
+               this.minecraft.getConnection().sendCommand("op " + RuleHelperConfig.nickname());
+               this.minecraft.getConnection().sendCommand("pex user " + this.playerName);
+               this.minecraft.gui.setScreen(null);
+            }
+         });
    }
 
-   private void quickButton(String label, int x, int y, int width, Runnable action) {
-      this.addRenderableWidget(Button.builder(Component.literal(label), b -> action.run())
-         .bounds(x, y, width, 20).build());
+   private void actionButton(String label, String command, int x, int y, int width, Runnable action) {
+      this.addRenderableWidget(new BlueButton(x, y, width, 22, Component.literal(label), b -> action.run())
+         .withTooltip(Tooltip.create(Component.literal(command).withStyle(ChatFormatting.AQUA))));
+   }
+
+   private String compactActionLabel(String code, int index, String original) {
+      return switch (code) {
+         case "1.3" -> index == 0 ? "IP-бан навсегда" : "Умышленно · IP";
+         case "1.8" -> index == 0 ? "Обход IP · навсегда" : "Обход · 3 дня";
+         case "2.1" -> index == 0 ? "IP-бан навсегда" : "Реклама сервера";
+         case "2.3" -> switch (index) { case 0 -> "Мут 3 ч"; case 1 -> "Мут 1 д"; case 2 -> "IP-мут 7 д"; default -> "IP-мут навсегда"; };
+         case "2.6" -> switch (index) { case 0 -> "Команда · 3 д"; case 1 -> "Проект · навсегда"; default -> "Повтор · снять"; };
+         case "3.1" -> index == 0 ? "IP-бан навсегда" : "Повтор · снять";
+         case "3.4" -> switch (index) { case 0 -> "Обычное · 1 д"; case 1 -> "Самонаказание · 6 ч"; default -> "Без док-в · 3 д"; };
+         case "3.6" -> index == 0 ? "Небольшое · 12 ч" : "Большое · 3 д";
+         case "4.2" -> index == 0 ? "Предупреждение" : "Повтор · 3 ч";
+         case "4.3" -> index == 0 ? "Изменение · 7 д" : "Умышленная порча";
+         case "4.4" -> switch (index) { case 0 -> "Обычное · 1 д"; case 1 -> "Тяжёлый случай · 3 д"; default -> "5+ раз · навсегда"; };
+         default -> original;
+      };
    }
 
    private void runPlayerCommand(String command) {
       if (this.minecraft == null || this.minecraft.getConnection() == null) return;
-      String full = RuleHelperConfig.applyDonationScope(command + " " + this.playerName);
+      String full = command + " " + this.playerName;
       this.minecraft.getConnection().sendCommand(full.startsWith("/") ? full.substring(1) : full);
       this.minecraft.gui.setScreen(null);
    }
 
+   private String commandFor(RuleEntry rule, RuleAction action) {
+      String command = RuleHelperConfig.formatCause(action.commandFor(this.playerName), rule.code(), rule.title());
+      return RuleHelperConfig.applyDonationScope(command, rule.code());
+   }
+
+   private void selectAction(RuleEntry rule, RuleAction action) {
+      if (rule.code().startsWith("4.") || rule.code().startsWith("5.")) {
+         this.minecraft.gui.setScreen(new ActionChoiceScreen(this.playerName, rule, this.firstRow));
+      } else {
+         this.execute(rule, action);
+      }
+   }
+
    private void openReleaseMenu() {
       if (this.minecraft == null) return;
-      RuleEntry release = new RuleEntry("release", "Разбан и размут", "Выбери команду для игрока " + this.playerName,
-         "Команда будет выполнена для выбранного ника", List.of(
-            new RuleAction("/unban " + this.playerName + " nekk", "/unban {player} nekk"),
-            new RuleAction("/unmute " + this.playerName + " nekk", "/unmute {player} nekk")
+      RuleEntry release = new RuleEntry("release", "Снятие наказания", "Выбери команду для игрока " + this.playerName,
+         "Разбан или размут на выбранном режиме", List.of(
+            new RuleAction("Разбан", "/unban {player} nekk"),
+            new RuleAction("Размут", "/unmute {player} nekk")
          ));
       this.minecraft.gui.setScreen(new ActionChoiceScreen(this.playerName, release, this.firstRow));
    }
 
    private void execute(RuleEntry rule, RuleAction action) {
       if (this.minecraft == null || this.minecraft.getConnection() == null) return;
-      String command = RuleHelperConfig.formatCause(action.commandFor(this.playerName), rule.code(), rule.title());
-      command = RuleHelperConfig.applyDonationScope(command, rule.code());
+      String command = this.commandFor(rule, action);
       this.minecraft.getConnection().sendCommand(command.startsWith("/") ? command.substring(1) : command);
       this.minecraft.gui.setScreen(null);
    }
@@ -330,10 +328,15 @@ public final class RuleMenuScreen extends Screen {
       this.addRenderableWidget(new StringWidget(this.width / 2 - width / 2, y, width, 14, text, this.font).setMaxWidth(maxWidth));
    }
 
+   private void addHeaderTitle(int x, int y, Component text, int maxWidth) {
+      StringWidget widget = new StringWidget(x, y, Math.min(this.font.width(text), maxWidth), 16, text, this.font);
+      widget.setMaxWidth(maxWidth);
+      this.addRenderableWidget(widget);
+   }
+
    private void addText(int x, int y, String value, ChatFormatting color, int lineHeight, int maxWidth) {
-      int width = Math.min(Math.max(1, maxWidth), Math.max(1, this.font.width(value)));
-      StringWidget widget = new StringWidget(x, y, width, lineHeight + 2,
-         Component.literal(value).withStyle(color), this.font);
+      StringWidget widget = new StringWidget(x, y, Math.min(Math.max(1, maxWidth), Math.max(1, this.font.width(value))),
+         lineHeight + 2, Component.literal(value).withStyle(color), this.font);
       widget.setMaxWidth(maxWidth);
       this.addRenderableWidget(widget);
    }
@@ -345,13 +348,8 @@ public final class RuleMenuScreen extends Screen {
       for (String word : value.split("\\s+")) {
          String test = line.isEmpty() ? word : line + " " + word;
          if (!line.isEmpty() && this.font.width(Component.literal(test)) > maxWidth) {
-            lines.add(line.toString());
-            line.setLength(0);
-            line.append(word);
-         } else {
-            if (!line.isEmpty()) line.append(' ');
-            line.append(word);
-         }
+            lines.add(line.toString()); line.setLength(0); line.append(word);
+         } else { if (!line.isEmpty()) line.append(' '); line.append(word); }
       }
       if (!line.isEmpty()) lines.add(line.toString());
       int count = Math.min(lines.size(), maxLines);
@@ -368,8 +366,7 @@ public final class RuleMenuScreen extends Screen {
          .append(Component.literal("\nНаказание: ").withStyle(ChatFormatting.GOLD))
          .append(Component.literal(rule.punishment()).withStyle(ChatFormatting.YELLOW));
       for (RuleAction action : rule.actions()) {
-         String command = RuleHelperConfig.formatCause(action.commandFor(this.playerName), rule.code(), rule.title());
-         command = RuleHelperConfig.applyDonationScope(command, rule.code());
+         String command = this.commandFor(rule, action);
          result = result.append(Component.literal("\n" + action.label() + ": ").withStyle(ChatFormatting.GRAY))
             .append(Component.literal(command).withStyle(ChatFormatting.AQUA));
       }
@@ -379,45 +376,39 @@ public final class RuleMenuScreen extends Screen {
    @Override
    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
       boolean overList = mouseX >= this.listX && mouseX <= this.listX + this.listWidth
-         && mouseY >= this.panelTop && mouseY <= this.panelBottom;
+         && mouseY >= this.listY && mouseY < this.panelY + this.panelHeight - 42;
       if (!overList) return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
       int max = Math.max(0, this.filteredRules().size() - this.visibleRuleRows);
       int next = Math.max(0, Math.min(max, this.firstRow + (verticalAmount < 0.0 ? 1 : -1)));
-      if (next != this.firstRow) {
-         this.firstRow = next;
-         this.rebuildWidgets();
-      }
+      if (next != this.firstRow) { this.firstRow = next; this.rebuildWidgets(); }
       return true;
    }
 
    @Override
    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-      graphics.fill(0, 0, this.width, this.height, -653652456);
-      this.panel(graphics, 12, 31, this.width - 24, 28, 0xE91A2B39, 0xFF36D7D1);
-      this.panel(graphics, this.leftX, this.panelTop, this.leftWidth, this.panelBottom - this.panelTop, 0xE9161D29, 0xFF354154);
-      this.panel(graphics, this.listX, this.panelTop, this.listWidth, this.panelBottom - this.panelTop, 0xE9161D29, 0xFF354154);
-      this.panel(graphics, this.detailX, this.panelTop, this.detailWidth, this.panelBottom - this.panelTop, 0xE9161D29, 0xFF354154);
+      graphics.fill(this.panelX - 2, this.panelY - 2, this.panelX + this.panelWidth + 2, this.panelY + this.panelHeight + 2, 0xE808101A);
+      graphics.fill(this.panelX, this.panelY, this.panelX + this.panelWidth, this.panelY + this.panelHeight, 0xCF14202E);
+      graphics.fill(this.panelX, this.panelY, this.panelX + this.panelWidth, this.panelY + 2, 0xFF39C7E8);
+      graphics.fill(this.panelX, this.panelY, this.panelX + 1, this.panelY + this.panelHeight, 0xFF39C7E8);
+      graphics.fill(this.panelX + this.panelWidth - 1, this.panelY, this.panelX + this.panelWidth, this.panelY + this.panelHeight, 0xFF39C7E8);
+      graphics.fill(this.panelX, this.panelY + this.panelHeight - 1, this.panelX + this.panelWidth, this.panelY + this.panelHeight, 0xFF39C7E8);
+      graphics.fill(this.panelX + 10, this.panelY + 39, this.panelX + this.panelWidth - 10, this.panelY + 40, 0xFF354D63);
+      graphics.fill(this.panelX + 10, this.panelY + 73, this.panelX + this.panelWidth - 10, this.panelY + 74, 0xFF354D63);
+      graphics.fill(this.detailX - 6, this.panelY + 75, this.detailX - 5, this.panelY + this.panelHeight - 40, 0xFF354D63);
       for (int i = 0; i < this.visibleRules.size(); i++) {
          if (!this.visibleRules.get(i).code().equals(this.selectedRuleCode)) continue;
-         int y = this.listTop + i * this.rowPitch;
-         graphics.fill(this.listX + 5, y - 2, this.listX + this.listWidth - 5, y + 24, 0xFF284353);
-         graphics.fill(this.listX + 5, y - 2, this.listX + 7, y + 24, 0xFF54E8E2);
-         graphics.fill(this.listX + this.listWidth - 7, y - 2, this.listX + this.listWidth - 5, y + 24, 0xFF54E8E2);
+         int y = this.listY + i * this.rowPitch;
+         graphics.fill(this.listX, y - 1, this.listX + this.listWidth, y + 22, 0xD6285C77);
+         graphics.fill(this.listX, y - 1, this.listX + 2, y + 22, 0xFF55DDF0);
+         graphics.fill(this.listX + this.listWidth - 2, y - 1, this.listX + this.listWidth, y + 22, 0xFF55DDF0);
       }
+      graphics.fill(this.panelX + 10, this.panelY + this.panelHeight - 37,
+         this.panelX + this.panelWidth - 10, this.panelY + this.panelHeight - 36, 0xFF354154);
       super.extractRenderState(graphics, mouseX, mouseY, delta);
-   }
-
-   private void panel(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int fill, int border) {
-      if (width <= 0 || height <= 0) return;
-      graphics.fill(x, y, x + width, y + height, fill);
-      graphics.fill(x, y, x + width, y + 1, border);
-      graphics.fill(x, y + height - 1, x + width, y + height, border);
-      graphics.fill(x, y, x + 1, y + height, border);
-      graphics.fill(x + width - 1, y, x + width, y + height, border);
    }
 
    @Override
    public void onClose() {
-      if (this.minecraft != null) this.minecraft.gui.setScreen(null);
+      if (this.minecraft != null) this.minecraft.gui.setScreen(this.returnTo);
    }
 }

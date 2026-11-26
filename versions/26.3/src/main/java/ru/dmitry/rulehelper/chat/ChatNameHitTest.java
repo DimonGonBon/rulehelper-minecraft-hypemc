@@ -21,12 +21,58 @@ public final class ChatNameHitTest {
       return hit == null ? null : findTokenAt(client.font, hit.line().content(), hit.x());
    }
 
+   /** Only the explicit RuleHelper marker opens the punishment menu; the nick text stays inert. */
+   public static String findPrefixTarget(Minecraft client, double mouseX, double mouseY) {
+      Hit hit = hit(client, mouseX, mouseY);
+      if (hit == null) return null;
+      String prefix = ru.dmitry.rulehelper.RuleHelperConfig.chatMenuPrefix();
+      String message = hit.line().parent().content().getString();
+      if (prefix.isBlank() || !message.startsWith(prefix + " ")) return null;
+      double prefixWidth = client.font.width(Component.literal(prefix + " "));
+      if (hit.x() >= prefixWidth) return null;
+      return ru.dmitry.rulehelper.chat.ChatMenuPrefix.sender(message.substring(prefix.length() + 1));
+   }
+
+   /** The message sender's actual name is a separate copy target; clicking the marker still opens the menu. */
+   public static String findMenuNameCopyTarget(Minecraft client, double mouseX, double mouseY) {
+      Hit hit = hit(client, mouseX, mouseY);
+      if (hit == null) return null;
+      String prefix = ru.dmitry.rulehelper.RuleHelperConfig.chatMenuPrefix();
+      if (prefix.isBlank()) return null;
+      String message = hit.line().parent().content().getString();
+      if (!message.startsWith(prefix + " ")) return null;
+      String sender = ru.dmitry.rulehelper.chat.ChatMenuPrefix.sender(message.substring(prefix.length() + 1));
+      if (sender == null || hit.x() < client.font.width(Component.literal(prefix + " "))) return null;
+      String hoveredName = findTokenAt(client.font, hit.line().content(), hit.x(), true);
+      return sender.equalsIgnoreCase(hoveredName) ? sender : null;
+   }
+
    public static PunishmentAnnouncement findPunishment(Minecraft client, double mouseX, double mouseY) {
       Hit hit = hit(client, mouseX, mouseY);
       if (hit == null || hit.line().parent().source() != GuiMessageSource.SYSTEM_SERVER) return null;
       // 26.3 exposes the original message for each wrapped row. Parse that exact
       // message rather than reconstructing it from neighboring visible rows.
       return PunishmentAnnouncement.parse(hit.line().parent().content().getString());
+   }
+
+   /** Resolve the actor or target label at the beginning of a punishment row. */
+   public static String findPunishmentCopyTarget(Minecraft client, double mouseX, double mouseY) {
+      Hit hit = hit(client, mouseX, mouseY);
+      if (hit == null || hit.line().parent().source() != GuiMessageSource.SYSTEM_SERVER) return null;
+      PunishmentAnnouncement announcement = PunishmentAnnouncement.parse(hit.line().parent().content().getString());
+      if (announcement == null) return null;
+      String visiblePrefix = formattedText(hit.line().content());
+      if (!visiblePrefix.startsWith(PunishmentCopyPrefixes.ISSUER_LABEL + " " + PunishmentCopyPrefixes.TARGET_LABEL + " ")) return null;
+      String part = PunishmentCopyPrefixes.targetAt(hit.x(), client.font);
+      if ("issuer".equals(part)) return announcement.issuer();
+      if ("target".equals(part)) return announcement.target();
+      return null;
+   }
+
+   private static String formattedText(FormattedCharSequence sequence) {
+      StringBuilder text = new StringBuilder();
+      sequence.accept((index, style, codePoint) -> { text.appendCodePoint(codePoint); return true; });
+      return text.toString();
    }
 
    private static Hit hit(Minecraft client, double mouseX, double mouseY) {
@@ -50,6 +96,10 @@ public final class ChatNameHitTest {
    private record Hit(Line line, double x) {}
 
    private static String findTokenAt(Font var0, FormattedCharSequence var1, double var2) {
+      return findTokenAt(var0, var1, var2, false);
+   }
+
+   private static String findTokenAt(Font var0, FormattedCharSequence var1, double var2, boolean allowClickable) {
       ArrayList<Glyph> var4 = new ArrayList<>();
       int[] var5 = new int[]{0};
       var1.accept((var3, var4x, var5x) -> {
@@ -66,7 +116,7 @@ public final class ChatNameHitTest {
          if (var2 >= var8.start && var2 < var8.end && isNameChar(var8.text)) {
             // Respect clickable chat components (e.g. WorldGuard [Add] buttons).
             // RuleHelper should only intercept ordinary player-name clicks.
-            if (var8.clickable) {
+            if (var8.clickable && !allowClickable) {
                return null;
             }
             var6 = var7;

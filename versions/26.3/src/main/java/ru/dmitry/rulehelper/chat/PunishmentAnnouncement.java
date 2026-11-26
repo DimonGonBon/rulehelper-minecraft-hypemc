@@ -12,17 +12,22 @@ public record PunishmentAnnouncement(Kind kind, String issuer, String target, St
    );
    private static final Pattern MODE = Pattern.compile("^(.*?)\\s*\\(([^()]*)\\)\\s*$");
    private static final Pattern ANNOUNCEMENT_START = Pattern.compile("^❨[！!]❩\\s*Игрок\\s+");
+   private static final Pattern UI_PREFIXES = Pattern.compile("(?iu)^🛡\\s+☠\\s*");
 
    public enum Kind { BAN, MUTE }
 
    /** True when the visible announcement row has the expected prefix. */
    public static boolean startsAnnouncement(String text) {
-      return text != null && ANNOUNCEMENT_START.matcher(text.stripLeading()).find();
+      return text != null && ANNOUNCEMENT_START.matcher(stripUiPrefixes(text).stripLeading()).find();
+   }
+
+   public static String stripUiPrefixes(String text) {
+      return text == null ? null : UI_PREFIXES.matcher(text.stripLeading()).replaceFirst("");
    }
 
    public static PunishmentAnnouncement parse(String text) {
       if (text == null) return null;
-      String normalized = text.strip().replaceAll("\\s+", " ");
+      String normalized = stripUiPrefixes(text).strip().replaceAll("\\s+", " ");
       Matcher matcher = MESSAGE.matcher(normalized);
       if (!matcher.matches()) return null;
       String duration = matcher.group(5) == null ? "не указан" : matcher.group(5).strip();

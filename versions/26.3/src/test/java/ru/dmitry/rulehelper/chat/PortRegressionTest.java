@@ -2,6 +2,7 @@ package ru.dmitry.rulehelper.chat;
 
 import ru.dmitry.rulehelper.RuleCatalog;
 import ru.dmitry.rulehelper.PlayerNames;
+import ru.dmitry.rulehelper.PunishmentScope;
 
 public final class PortRegressionTest {
    public static void main(String[] args) {
@@ -37,7 +38,42 @@ public final class PortRegressionTest {
       require(PunishmentAnnouncement.parse("Player123 ⇨ ❨！❩ Игрок Moderator забанил Player456 на 6 часов по причине: 3.4") == null, "Player-spoofed prefix");
       require(PlayerNames.isValid("Player_123") && !PlayerNames.isValid("Русский"), "Chat/profile names remain Latin-only");
       require(!PlayerNames.isValid("ab") && !PlayerNames.isValid("nick-123"), "Reject too-short or unsupported chat/profile names");
-      System.out.println("PASS: " + clicks + " chat row clicks and punishment parser checks");
+      require(PunishmentScope.fromAnnouncementMode("выживание") == PunishmentScope.SURVIVAL, "survival mode");
+      require(PunishmentScope.fromAnnouncementMode("гриферский") == PunishmentScope.GRIEF, "grief mode");
+      require(PunishmentScope.fromAnnouncementMode("мини-игры") == PunishmentScope.MINIGAMES, "minigames mode");
+      require(PunishmentScope.fromAnnouncementMode("глобальный") == PunishmentScope.GLOBAL, "global mode");
+      require(PunishmentScope.fromAnnouncementMode("неизвестный") == null, "unknown mode");
+      require(PunishmentScope.GRIEF.applyToCommand("/unban player nekk")
+         .equals("/unban player nekk server:гриферский"), "release targets announcement mode");
+      require(PunishmentScope.SURVIVAL.applyToCommand("/unmute player nekk -g")
+         .equals("/unmute player nekk server:выживание"), "release replaces prior selector");
+      require(ModerationAlertDetector.familyInsult("Игрок Steve ⇨ Батя твой ебанат") != null,
+         "family insult alert covers father insult");
+      require(ModerationAlertDetector.familyInsult("Игрок Steve ⇨ Мать чекни") != null,
+         "family alert covers bait phrase");
+      var history = new HistoryPunishmentParser();
+      var now = java.time.LocalDateTime.of(2026, 11, 26, 21, 4, 59);
+      var externalHistory = new HistoryPunishmentParser();
+      externalHistory.begin("shll");
+      require(!externalHistory.acceptLine("История наказаний игроком otherNick (Записей: 2)", now)
+         && !externalHistory.acceptLine("- 2 часов назад -", now),
+         "Do not suppress a manually requested /shist for another player");
+      history.begin("shll");
+      require(history.acceptLine("История наказаний игроком shll (Записей: 2)", now),
+         "Recognize own /shist response header for suppression");
+      require(history.acceptLine("- 2 часов 14 минут назад -", now),
+         "Recognize age separator in own /shist response");
+      require(!history.acceptLine("Ⓖ anotherPlayer → hello", now),
+         "Keep unrelated chat visible while own /shist response is loading");
+      require(history.acceptLine("neadamskidotcom был забанен на 1 день shll: 3.4 (глобальный)", now),
+         "Recognize own /shist punishment record for suppression");
+      history.acceptLine("- 1 день 8 часов 4 минут назад -", now);
+      history.acceptLine("xideZ был забанен на 3 дней shll: 1.8 (глобальный)", now);
+      require(history.today().size() == 1, "Daily history excludes punishments from yesterday");
+      require(history.today().getFirst().target().equals("neadamskidotcom")
+         && history.today().getFirst().issuedAt().equals(java.time.LocalDateTime.of(2026, 11, 26, 18, 50, 59)),
+         "Daily history uses each /shist relative timestamp");
+      System.out.println("PASS: " + clicks + " chat row clicks, punishment parsing, mode selectors and /shist daily filtering");
    }
    private static void require(boolean value, String message) {
       if (!value) throw new AssertionError(message);

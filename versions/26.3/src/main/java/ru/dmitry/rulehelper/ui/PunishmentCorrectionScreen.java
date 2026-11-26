@@ -3,11 +3,11 @@ package ru.dmitry.rulehelper.ui;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.Component;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import ru.dmitry.rulehelper.PunishmentScope;
 import ru.dmitry.rulehelper.RuleHelperConfig;
 import ru.dmitry.rulehelper.chat.PunishmentAnnouncement;
 
@@ -16,6 +16,8 @@ public final class PunishmentCorrectionScreen extends Screen {
    private final PunishmentAnnouncement announcement;
    private boolean released;
    private String selectedDuration;
+   private int panelX, panelY, panelWidth, panelHeight;
+   private int detailsBottom;
 
    public PunishmentCorrectionScreen(PunishmentAnnouncement announcement) {
       super(Component.literal("Проверка наказания"));
@@ -24,77 +26,130 @@ public final class PunishmentCorrectionScreen extends Screen {
 
    @Override
    protected void init() {
-      int maxWidth = Math.min(this.width - 28, 560);
-      int y = 14;
-      this.addCenteredText(y, Component.literal("ПРОВЕРЬ ДАННЫЕ ПЕРЕД КОМАНДОЙ").withStyle(new ChatFormatting[]{ChatFormatting.YELLOW, ChatFormatting.BOLD}), maxWidth);
-      y += 22;
-      this.addCenteredText(y, Component.literal("Строка наказания:").withStyle(ChatFormatting.GRAY), maxWidth);
-      y += 14;
-      y = this.addWrappedText(y, this.announcement.originalLine(), maxWidth, ChatFormatting.AQUA);
-      y += 3;
-      Component issuer = Component.literal("Выдал наказание: ").withStyle(new ChatFormatting[]{ChatFormatting.BOLD, ChatFormatting.YELLOW})
-         .append(Component.literal(this.announcement.issuer()).withStyle(ChatFormatting.AQUA));
-      this.addCenteredText(y, issuer, maxWidth);
-      y += 15;
-      this.addCenteredText(y, Component.literal("Получил наказание: " + this.announcement.target()).withStyle(ChatFormatting.GOLD), maxWidth);
-      y += 15;
-      y = this.addField(y, "Причина:", this.announcement.cleanReason(), maxWidth);
-      y += 2;
-      y = this.addField(y, "Срок:", this.announcement.duration(), maxWidth);
-      y += 2;
-      y = this.addField(y, "Режим:", this.announcement.mode(), maxWidth);
-      y += 16;
+      this.panelWidth = Math.min(820, this.width - 24);
+      this.panelHeight = Math.min(500, this.height - 20);
+      this.panelX = (this.width - this.panelWidth) / 2;
+      this.panelY = (this.height - this.panelHeight) / 2;
+      int contentX = this.panelX + 18;
+      int contentWidth = this.panelWidth - 36;
 
+      this.addCenteredText(this.panelY + 14, Component.literal("ПРОВЕРКА НАКАЗАНИЯ")
+         .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), contentWidth, 16);
+      this.addCenteredText(this.panelY + 35, Component.literal("Сверь объявление и данные перед снятием или выдачей наказания")
+         .withStyle(ChatFormatting.GRAY), contentWidth, 14);
+
+      int y = this.panelY + 62;
+      this.addText(contentX + 12, y, Component.literal("ИСХОДНОЕ ОБЪЯВЛЕНИЕ")
+         .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), contentWidth - 24, 13);
+      y += 18;
+      y = this.addWrappedText(y, this.announcement.originalLine(), contentX + 12,
+         contentWidth - 24, ChatFormatting.AQUA, 15);
+      y += 5;
+
+      Component issuer = Component.literal("Выдал наказание: ").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)
+         .append(Component.literal(this.announcement.issuer()).withStyle(ChatFormatting.AQUA));
+      this.addCenteredText(y, issuer, contentWidth, 14);
+      y += 16;
+      this.addCenteredText(y, Component.literal("Получил наказание: ").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
+         .append(Component.literal(this.announcement.target()).withStyle(ChatFormatting.WHITE)), contentWidth, 14);
+      y += 17;
+      y = this.addField(y, "Причина", this.announcement.cleanReason(), contentWidth);
+      y = this.addField(y, "Срок", this.announcement.duration(), contentWidth);
+      y = this.addField(y, "Режим", this.announcement.mode(), contentWidth);
+      this.detailsBottom = y + 7;
+
+      int actionY = this.detailsBottom + 11;
+      this.addCenteredText(actionY, Component.literal("ДЕЙСТВИЕ")
+         .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), contentWidth, 13);
+      actionY += 19;
       if (!RuleHelperConfig.isConfigured()) {
-         this.addCenteredText(y, Component.literal("Сначала укажи ник и донат в настройке Rule Helper."), maxWidth);
+         this.addCenteredText(actionY, Component.literal("Сначала укажи ник и донат в настройках RuleHelper.")
+            .withStyle(ChatFormatting.RED), contentWidth, 14);
       } else if (!this.released) {
-         this.addCenteredText(y, Component.literal("Выбери наказание 3.4. Исходный бан/мут снимется без -g."), maxWidth);
-         y += 20;
-         if (this.announcement.issuer().equalsIgnoreCase(this.announcement.target())) {
-            this.addButton("Снять и подготовить 3.4 — 6 часов", this.width / 2 - 155, y, 310, () -> this.releaseAndPrepare("6h"));
+         PunishmentScope detectedScope = this.detectedScope();
+         if (detectedScope == null) {
+            this.addCenteredText(actionY, Component.literal("Не удалось определить режим наказания из объявления.")
+               .withStyle(ChatFormatting.RED, ChatFormatting.BOLD), contentWidth, 14);
+            actionY += 17;
+            this.addCenteredText(actionY, Component.literal("Автоматическое снятие отключено, чтобы не снять наказание не в том режиме.")
+               .withStyle(ChatFormatting.GRAY), contentWidth, 14);
          } else {
-            this.addButton("Снять и подготовить 3.4 — 3 дня", this.width / 2 - 155, y, 310, () -> this.releaseAndPrepare("3d"));
-            y += 25;
-            this.addButton("Снять и подготовить 3.4 — 1 день", this.width / 2 - 155, y, 310, () -> this.releaseAndPrepare("1d"));
+            String selector = switch (detectedScope) {
+               case GLOBAL -> "-g";
+               case SURVIVAL -> "server:выживание";
+               case GRIEF -> "server:гриферский";
+               case MINIGAMES -> "server:мини-игры";
+               default -> "текущий режим";
+            };
+            this.addCenteredText(actionY, Component.literal("Режим снятия определён автоматически: " + detectedScope.label()
+               + " · " + selector).withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), contentWidth, 14);
+            actionY += 16;
+            this.addCenteredText(actionY, Component.literal("Наказание 3.4 выдавшему игроку пойдёт глобально (-g).")
+               .withStyle(ChatFormatting.YELLOW), contentWidth, 14);
+            actionY += 20;
+            int buttonWidth = Math.min(410, contentWidth - 16);
+            int buttonX = this.width / 2 - buttonWidth / 2;
+            if (this.announcement.issuer().equalsIgnoreCase(this.announcement.target())) {
+               this.addButton("Снять и подготовить 3.4 · 6 часов", buttonX, actionY, buttonWidth,
+                  () -> this.releaseAndPrepare("6h"));
+            } else {
+               this.addButton("Снять и подготовить 3.4 · 3 дня", buttonX, actionY, buttonWidth,
+                  () -> this.releaseAndPrepare("3d"));
+               actionY += 27;
+               this.addButton("Снять и подготовить 3.4 · 1 день", buttonX, actionY, buttonWidth,
+                  () -> this.releaseAndPrepare("1d"));
+            }
          }
       } else {
-         this.addCenteredText(y, Component.literal("Отправлено: " + this.releaseCommand()).withStyle(ChatFormatting.AQUA), maxWidth);
-         y += 16;
-         this.addCenteredText(y, Component.literal("Проверь ответ сервера. После успешного снятия подтверди ниже."), maxWidth);
-         y += 20;
-         this.addButton("Подтверждаю снятие — выдать 3.4", this.width / 2 - 155, y, 310, this::issueRule34);
+         this.addCenteredText(actionY, Component.literal("Команда снятия отправлена:")
+            .withStyle(ChatFormatting.GRAY), contentWidth, 13);
+         actionY += 15;
+         this.addCenteredText(actionY, Component.literal(this.releaseCommand()).withStyle(ChatFormatting.AQUA), contentWidth, 14);
+         actionY += 18;
+         this.addCenteredText(actionY, Component.literal("Проверь ответ сервера. Подтверди снятие перед выдачей 3.4.")
+            .withStyle(ChatFormatting.YELLOW), contentWidth, 14);
+         actionY += 19;
+         int buttonWidth = Math.min(410, contentWidth - 16);
+         this.addButton("Подтверждаю снятие · выдать 3.4", this.width / 2 - buttonWidth / 2,
+            actionY, buttonWidth, this::issueRule34);
       }
 
-      this.addCenteredText(this.height - 58, Component.literal("ВНИМАНИЕ: ВНИМАТЕЛЬНО ПРОВЕРЬ ВСЕ ДАННЫЕ!").withStyle(ChatFormatting.RED), maxWidth);
-      this.addCenteredText(this.height - 46, Component.literal("НИКИ, ПРИЧИНУ, СРОК И РЕЖИМ ПЕРЕД ДЕЙСТВИЕМ.").withStyle(ChatFormatting.RED), maxWidth);
-
-      this.addButton("Отмена", this.width / 2 - 48, this.height - 32, 96, this::close);
+      int footerY = this.panelY + this.panelHeight - 63;
+      this.addCenteredText(footerY, Component.literal("Проверь ник, причину, срок и режим перед действием.")
+         .withStyle(ChatFormatting.RED, ChatFormatting.BOLD), contentWidth, 14);
+      this.addCenteredText(footerY + 15, Component.literal("Снятие и выдача наказания выполняются отдельными шагами.")
+         .withStyle(ChatFormatting.GRAY), contentWidth, 13);
+      this.addRenderableWidget(new BlueButton(this.width / 2 - 54, this.panelY + this.panelHeight - 31,
+         108, 22, Component.literal("Отмена"), b -> this.close()));
    }
 
    private int addField(int y, String label, String value, int maxWidth) {
-      String labelPrefix = label + " ";
-      List<String> lines = this.wrap(labelPrefix + value, maxWidth);
-      for (int i = 0; i < lines.size(); i++) {
-         String line = lines.get(i);
-         Component text;
-         if (i == 0) {
-            String content = line.length() > labelPrefix.length() ? line.substring(labelPrefix.length()) : "";
-            text = Component.literal(labelPrefix).withStyle(ChatFormatting.BOLD)
-               .append(Component.literal(content).withStyle(ChatFormatting.AQUA));
-         } else {
-            text = Component.literal(line).withStyle(ChatFormatting.AQUA);
-         }
-         this.addCenteredText(y, text, maxWidth);
-         y += 12;
+      Component text = Component.literal(label + ": ").withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD)
+         .append(Component.literal(value).withStyle(ChatFormatting.AQUA));
+      return this.addWrappedComponent(y, text, this.panelX + 18, maxWidth, 14);
+   }
+
+   private int addWrappedText(int y, String value, int x, int maxWidth, ChatFormatting color, int lineHeight) {
+      for (String line : this.wrap(value, maxWidth)) {
+         this.addText(x, y, Component.literal(line).withStyle(color), maxWidth, lineHeight);
+         y += lineHeight;
       }
       return y;
    }
 
-   private int addWrappedText(int y, String value, int maxWidth, ChatFormatting color) {
-      for (String line : this.wrap(value, maxWidth)) {
-         Component text = Component.literal(line).withStyle(color);
-         this.addCenteredText(y, text, maxWidth);
-         y += 12;
+   private int addWrappedComponent(int y, Component text, int x, int maxWidth, int lineHeight) {
+      String plain = text.getString();
+      List<String> lines = this.wrap(plain, maxWidth);
+      for (int i = 0; i < lines.size(); i++) {
+         Component line = Component.literal(lines.get(i)).withStyle(ChatFormatting.AQUA);
+         if (i == 0) {
+            int colon = lines.get(i).indexOf(':');
+            if (colon >= 0) line = Component.literal(lines.get(i).substring(0, colon + 1) + " ")
+               .withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD)
+               .append(Component.literal(lines.get(i).substring(colon + 1).stripLeading()).withStyle(ChatFormatting.AQUA));
+         }
+         this.addText(x, y, line, maxWidth, lineHeight);
+         y += lineHeight;
       }
       return y;
    }
@@ -137,8 +192,7 @@ public final class PunishmentCorrectionScreen extends Screen {
    private void releaseAndPrepare(String duration) {
       if (this.minecraft == null || this.minecraft.getConnection() == null || this.released) return;
       this.selectedDuration = duration;
-      String command = this.releaseCommand();
-      this.minecraft.getConnection().sendCommand(command.substring(1));
+      this.minecraft.getConnection().sendCommand(this.releaseCommand().substring(1));
       this.released = true;
       this.rebuildWidgets();
    }
@@ -147,7 +201,13 @@ public final class PunishmentCorrectionScreen extends Screen {
       String verb = this.announcement.kind() == PunishmentAnnouncement.Kind.MUTE
          ? "/unmute "
          : (this.announcement.ipTarget() ? "/unbanip " : "/unban ");
-      return verb + this.announcement.target() + " nekk";
+      String command = verb + this.announcement.target() + " nekk";
+      PunishmentScope scope = this.detectedScope();
+      return scope == null ? command : RuleHelperConfig.applyPunishmentScope(command, scope);
+   }
+
+   private PunishmentScope detectedScope() {
+      return PunishmentScope.fromAnnouncementMode(this.announcement.mode());
    }
 
    private void issueRule34() {
@@ -159,22 +219,42 @@ public final class PunishmentCorrectionScreen extends Screen {
    }
 
    private void addButton(String label, int x, int y, int width, Runnable action) {
-      this.addRenderableWidget(Button.builder(Component.literal(label), button -> action.run())
-         .bounds(x, y, width, 20).build());
+      this.addRenderableWidget(new BlueButton(x, y, width, 23,
+         Component.literal(label).withStyle(ChatFormatting.WHITE), b -> action.run()));
    }
 
-   private void addCenteredText(int y, Component text, int maxWidth) {
+   private void addCenteredText(int y, Component text, int maxWidth, int height) {
       int width = Math.min(this.font.width(text), maxWidth);
-      this.addRenderableWidget(new StringWidget(this.width / 2 - width / 2, y, width, 12, text, this.font));
+      StringWidget widget = new StringWidget(this.width / 2 - width / 2, y, width, height, text, this.font);
+      widget.setMaxWidth(maxWidth);
+      this.addRenderableWidget(widget);
    }
 
-   private void close() {
-      if (this.minecraft != null) this.minecraft.gui.setScreen(null);
+   private void addText(int x, int y, Component text, int maxWidth, int height) {
+      int width = Math.min(this.font.width(text), maxWidth);
+      StringWidget widget = new StringWidget(x, y, width, height, text, this.font);
+      widget.setMaxWidth(maxWidth);
+      this.addRenderableWidget(widget);
    }
+
+   private void close() { if (this.minecraft != null) this.minecraft.gui.setScreen(null); }
 
    @Override
-   public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-      context.fill(0, 0, this.width, this.height, -653652456);
-      super.extractRenderState(context, mouseX, mouseY, delta);
+   public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+      graphics.fill(this.panelX - 1, this.panelY - 1, this.panelX + this.panelWidth + 1,
+         this.panelY + this.panelHeight + 1, 0xD908101A);
+      graphics.fill(this.panelX, this.panelY, this.panelX + this.panelWidth,
+         this.panelY + this.panelHeight, 0xD51A2432);
+      graphics.fill(this.panelX, this.panelY, this.panelX + this.panelWidth, this.panelY + 2, 0xFF38C5D2);
+      graphics.fill(this.panelX, this.panelY, this.panelX + 1, this.panelY + this.panelHeight, 0xFF38C5D2);
+      graphics.fill(this.panelX + this.panelWidth - 1, this.panelY, this.panelX + this.panelWidth,
+         this.panelY + this.panelHeight, 0xFF38C5D2);
+      graphics.fill(this.panelX, this.panelY + this.panelHeight - 1, this.panelX + this.panelWidth,
+         this.panelY + this.panelHeight, 0xFF38C5D2);
+      graphics.fill(this.panelX + 10, this.panelY + 56, this.panelX + this.panelWidth - 10,
+         this.detailsBottom, 0x9C223447);
+      graphics.fill(this.panelX + 10, this.panelY + 56, this.panelX + 12,
+         this.detailsBottom, 0xFF38C5D2);
+      super.extractRenderState(graphics, mouseX, mouseY, delta);
    }
 }

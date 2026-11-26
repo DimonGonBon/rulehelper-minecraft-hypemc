@@ -2,15 +2,16 @@ package ru.dmitry.rulehelper.ui;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import ru.dmitry.rulehelper.RuleHelperConfig;
 
-/** Test-only cause formatting preview and selector. */
+/** Cause formatting preview and selector. */
 public final class CauseStyleScreen extends Screen {
    private final Screen parent;
+   private int panelX, panelY, panelWidth, panelHeight;
+
    public CauseStyleScreen(Screen parent) {
       super(Component.literal("Варианты причины"));
       this.parent = parent;
@@ -18,28 +19,42 @@ public final class CauseStyleScreen extends Screen {
 
    @Override
    protected void init() {
-      this.addCentered(14, Component.literal("СТИЛЬ ПРИЧИНЫ — ТЕСТ").withStyle(new ChatFormatting[]{ChatFormatting.AQUA, ChatFormatting.BOLD}), 250);
-      this.addCentered(31, Component.literal("Короткий, расширенный или с символами").withStyle(ChatFormatting.GRAY), 330);
+      this.panelWidth = Math.min(670, this.width - 24);
+      this.panelHeight = Math.min(365, this.height - 24);
+      this.panelX = (this.width - this.panelWidth) / 2;
+      this.panelY = (this.height - this.panelHeight) / 2;
+      this.addCentered(this.panelY + 16, Component.literal("СТИЛЬ ПРИЧИНЫ")
+         .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), this.panelWidth - 32, 16);
+      this.addCentered(this.panelY + 38, Component.literal("Выбери, как RuleHelper будет оформлять причину в команде")
+         .withStyle(ChatFormatting.GRAY), this.panelWidth - 32, 14);
+      this.addCentered(this.panelY + 60, Component.literal("Пример: 3.4 | Некорректные наказания")
+         .withStyle(ChatFormatting.WHITE), this.panelWidth - 32, 14);
+
       RuleHelperConfig.CauseStyle[] styles = RuleHelperConfig.CauseStyle.values();
-      int gap = 8;
-      int width = Math.min(244, (this.width - 32 - gap) / 2);
-      int left = (this.width - (width * 2 + gap)) / 2;
-      int top = 58;
+      int gapX = 10;
+      int colWidth = (this.panelWidth - 40 - gapX) / 2;
+      int left = this.panelX + 15;
+      int top = this.panelY + 91;
+      int rowPitch = 69;
       for (int i = 0; i < styles.length; i++) {
          RuleHelperConfig.CauseStyle style = styles[i];
-         int x = left + (i % 2) * (width + gap);
-         int y = top + (i / 2) * 56;
-         Component label = Component.literal((style == RuleHelperConfig.causeStyle() ? "✓ " : "") + style.label())
-            .withStyle(style == RuleHelperConfig.causeStyle() ? ChatFormatting.AQUA : ChatFormatting.WHITE);
-         this.addRenderableWidget(Button.builder(label, b -> {
+         int x = left + (i % 2) * (colWidth + gapX);
+         int y = top + (i / 2) * rowPitch;
+         boolean selected = style == RuleHelperConfig.causeStyle();
+         Component label = Component.literal((selected ? "✓  " : "") + style.label())
+            .withStyle(selected ? new ChatFormatting[]{ChatFormatting.AQUA, ChatFormatting.BOLD}
+               : new ChatFormatting[]{ChatFormatting.WHITE});
+         this.addRenderableWidget(new BlueButton(x, y, colWidth, 24, label, b -> {
             RuleHelperConfig.setCauseStyle(style);
             this.minecraft.gui.setScreen(this.parent);
-         }).bounds(x, y, width, 20).build());
-         this.addCentered(y + 24, Component.literal(preview(style)).withStyle(ChatFormatting.WHITE), width + gap);
+         }));
+         this.addCentered(y + 32, Component.literal(preview(style)).withStyle(
+            selected ? new ChatFormatting[]{ChatFormatting.AQUA, ChatFormatting.BOLD}
+               : new ChatFormatting[]{ChatFormatting.GRAY}), colWidth, 14);
       }
-      int bottom = this.height - 30;
-      this.addRenderableWidget(Button.builder(Component.literal("← Назад"), b -> this.minecraft.gui.setScreen(this.parent))
-         .bounds(this.width / 2 - 52, bottom, 104, 20).build());
+      this.addRenderableWidget(new BlueButton(this.width / 2 - 64,
+         this.panelY + this.panelHeight - 32, 128, 22, Component.literal("← Назад"),
+         b -> this.minecraft.gui.setScreen(this.parent)));
    }
 
    private static String preview(RuleHelperConfig.CauseStyle style) {
@@ -53,15 +68,25 @@ public final class CauseStyleScreen extends Screen {
       };
    }
 
-   private void addCentered(int y, Component text, int maxWidth) {
-      int w = Math.min(this.font.width(text), maxWidth);
-      this.addRenderableWidget(new StringWidget(this.width / 2 - w / 2, y, w, 12, text, this.font).setMaxWidth(maxWidth));
+   private void addCentered(int y, Component text, int maxWidth, int height) {
+      int width = Math.min(this.font.width(text), maxWidth);
+      StringWidget widget = new StringWidget(this.width / 2 - width / 2, y, width, height, text, this.font);
+      widget.setMaxWidth(maxWidth);
+      this.addRenderableWidget(widget);
    }
 
    @Override
    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-      graphics.fill(0, 0, this.width, this.height, -653652456);
-      graphics.fill(this.width / 2 - 155, 48, this.width / 2 + 155, 49, -13246990);
+      graphics.fill(this.panelX - 1, this.panelY - 1, this.panelX + this.panelWidth + 1,
+         this.panelY + this.panelHeight + 1, 0xD908101A);
+      graphics.fill(this.panelX, this.panelY, this.panelX + this.panelWidth,
+         this.panelY + this.panelHeight, 0xD51A2432);
+      graphics.fill(this.panelX, this.panelY, this.panelX + this.panelWidth, this.panelY + 2, 0xFF38C5D2);
+      graphics.fill(this.panelX, this.panelY, this.panelX + 1, this.panelY + this.panelHeight, 0xFF38C5D2);
+      graphics.fill(this.panelX + this.panelWidth - 1, this.panelY, this.panelX + this.panelWidth,
+         this.panelY + this.panelHeight, 0xFF38C5D2);
+      graphics.fill(this.panelX, this.panelY + this.panelHeight - 1, this.panelX + this.panelWidth,
+         this.panelY + this.panelHeight, 0xFF38C5D2);
       super.extractRenderState(graphics, mouseX, mouseY, delta);
    }
 }

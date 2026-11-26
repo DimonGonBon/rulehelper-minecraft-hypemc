@@ -9,6 +9,7 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.fabricmc.loader.api.FabricLoader;
+import com.mojang.blaze3d.platform.InputConstants;
 
 /** Small per-install configuration recovered from the distributed JARs. */
 public final class RuleHelperConfig {
@@ -29,6 +30,9 @@ public final class RuleHelperConfig {
    private static String nickname = "";
    private static DonationTier tier;
    private static CauseStyle causeStyle = CauseStyle.SHORT;
+   private static String alertPrefix = "⚠ RuleHelper » ";
+   private static String chatMenuPrefix = "»";
+   private static int dailyHistoryKey = InputConstants.KEY_F9;
 
    static {
       load();
@@ -53,19 +57,31 @@ public final class RuleHelperConfig {
    }
 
    public static CauseStyle causeStyle() { return causeStyle; }
+   public static String alertPrefix() { return alertPrefix; }
+   public static String chatMenuPrefix() { return chatMenuPrefix; }
+   public static int dailyHistoryKey() { return dailyHistoryKey; }
+
+   public static void setAlertPrefix(String value) {
+      String prefix = value == null ? "" : value;
+      alertPrefix = prefix.substring(0, Math.min(32, prefix.length()));
+      persist();
+   }
+
+   public static void setChatMenuPrefix(String value) {
+      String prefix = value == null ? "" : value.strip();
+      chatMenuPrefix = prefix.substring(0, Math.min(8, prefix.length()));
+      persist();
+   }
+
+   public static void setDailyHistoryKey(int key) {
+      dailyHistoryKey = key == InputConstants.KEY_ESCAPE || key == InputConstants.KEY_HOME
+         ? InputConstants.KEY_F9 : key;
+      persist();
+   }
 
    public static void setCauseStyle(CauseStyle style) {
       causeStyle = style == null ? CauseStyle.SHORT : style;
-      Properties properties = new Properties();
-      properties.setProperty("nickname", nickname);
-      if (tier != null) properties.setProperty("donation", tier.name());
-      properties.setProperty("causeStyle", causeStyle.name());
-      try {
-         Files.createDirectories(FILE.getParent());
-         try (OutputStream output = Files.newOutputStream(FILE)) { properties.store(output, "Rule Helper settings"); }
-      } catch (IOException exception) {
-         throw new IllegalStateException("Could not save Rule Helper settings", exception);
-      }
+      persist();
    }
 
    public static String formatCause(String command, String ruleCode, String title) {
@@ -92,18 +108,7 @@ public final class RuleHelperConfig {
    public static void save(String name, DonationTier selectedTier) {
       nickname = name.trim();
       tier = selectedTier;
-      Properties properties = new Properties();
-      properties.setProperty("nickname", nickname);
-      properties.setProperty("donation", tier.name());
-      properties.setProperty("causeStyle", causeStyle.name());
-      try {
-         Files.createDirectories(FILE.getParent());
-         try (OutputStream output = Files.newOutputStream(FILE)) {
-            properties.store(output, "Rule Helper settings");
-         }
-      } catch (IOException exception) {
-         throw new IllegalStateException("Could not save Rule Helper settings", exception);
-      }
+      persist();
    }
 
    /** Keeps donation scope for standalone extra commands that are not tied to a numbered rule. */
@@ -125,6 +130,20 @@ public final class RuleHelperConfig {
       return normalized;
    }
 
+   /** Uses an explicitly detected server when releasing an announced punishment. */
+   public static String applyPunishmentScope(String command, PunishmentScope scope) {
+      String ruleCode = null;
+      return applyPunishmentScope(command, ruleCode, scope);
+   }
+
+   public static String applyPunishmentScope(String command, String ruleCode, PunishmentScope scope) {
+      if (scope == null || scope == PunishmentScope.RULE_DEFAULT) {
+         return applyDonationScope(command, ruleCode);
+      }
+      if (scope == PunishmentScope.CURRENT) return command.trim();
+      return scope.applyToCommand(command);
+   }
+
    private static void load() {
       if (!Files.isRegularFile(FILE)) {
          return;
@@ -132,6 +151,10 @@ public final class RuleHelperConfig {
       Properties properties = new Properties();
       try (InputStream input = Files.newInputStream(FILE)) {
          properties.load(input);
+         alertPrefix = properties.getProperty("alert_prefix", alertPrefix);
+         chatMenuPrefix = properties.getProperty("chat_menu_prefix", chatMenuPrefix);
+         try { dailyHistoryKey = Integer.parseInt(properties.getProperty("daily_history_key", Integer.toString(dailyHistoryKey))); }
+         catch (NumberFormatException ignored) { dailyHistoryKey = InputConstants.KEY_F9; }
          try { causeStyle = CauseStyle.valueOf(properties.getProperty("causeStyle", "SHORT")); }
          catch (IllegalArgumentException ignored) { causeStyle = CauseStyle.SHORT; }
          String loadedName = properties.getProperty("nickname", "").trim();
@@ -148,6 +171,22 @@ public final class RuleHelperConfig {
       } catch (IOException ignored) {
          nickname = "";
          tier = null;
+      }
+   }
+
+   private static void persist() {
+      Properties properties = new Properties();
+      properties.setProperty("nickname", nickname);
+      if (tier != null) properties.setProperty("donation", tier.name());
+      properties.setProperty("causeStyle", causeStyle.name());
+      properties.setProperty("alert_prefix", alertPrefix);
+      properties.setProperty("chat_menu_prefix", chatMenuPrefix);
+      properties.setProperty("daily_history_key", Integer.toString(dailyHistoryKey));
+      try {
+         Files.createDirectories(FILE.getParent());
+         try (OutputStream output = Files.newOutputStream(FILE)) { properties.store(output, "Rule Helper settings"); }
+      } catch (IOException exception) {
+         throw new IllegalStateException("Could not save Rule Helper settings", exception);
       }
    }
 }

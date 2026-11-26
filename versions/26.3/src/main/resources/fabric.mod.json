@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "id": "rule_helper",
-  "version": "1.3.2",
+  "version": "1.3.5",
   "name": "Rule Helper",
-  "description": "Quickly choose a moderation rule from a player's chat name with saved nickname and donation tier settings.",
+  "description": "Donator edition: rule selection, saved donation tier, cause styles, and mode-aware punishment release.",
   "environment": "client",
   "entrypoints": { "client": ["ru.dmitry.rulehelper.RuleHelperClient"] },
   "mixins": [{ "config": "rule_helper.mixins.json", "environment": "client" }],
