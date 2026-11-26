@@ -36,3 +36,6 @@ tasks.register('portRegressionTest', JavaExec) {
  mainClass = 'ru.dmitry.rulehelper.chat.PortRegressionTest'
 }
 check.dependsOn portRegressionTest
+
+tasks.named('test') { failOnNoDiscoveredTests = false }
+loom { mixin { defaultRefmapName = 'rule_helper.refmap.json' } }

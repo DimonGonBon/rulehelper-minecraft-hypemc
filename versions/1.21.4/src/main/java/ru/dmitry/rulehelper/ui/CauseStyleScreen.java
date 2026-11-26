@@ -2,7 +2,7 @@ package ru.dmitry.rulehelper.ui;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.StringWidget;
+
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import ru.dmitry.rulehelper.RuleHelperConfig;

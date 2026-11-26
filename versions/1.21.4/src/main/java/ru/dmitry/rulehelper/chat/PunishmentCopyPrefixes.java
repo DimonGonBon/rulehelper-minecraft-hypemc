@@ -28,8 +28,8 @@ public final class PunishmentCopyPrefixes {
 
    private static MutableComponent label(String text, String nickname, ChatFormatting color, String hover) {
       return Component.literal(text).setStyle(Style.EMPTY.withColor(color).withBold(false)
-         .withClickEvent(new ClickEvent.CopyToClipboard(nickname))
-         .withHoverEvent(new HoverEvent.ShowText(Component.literal(hover + ": " + nickname))));
+         .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, nickname))
+         .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(hover + ": " + nickname))));
    }
 
    public static String targetAt(double x, net.minecraft.client.gui.Font font) {
