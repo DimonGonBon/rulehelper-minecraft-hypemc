@@ -5,10 +5,12 @@
   "client": [
     "ChatScreenMixin",
     "ChatHudAccessor",
-    "ShistCommandMixin",
-    "ShistOutputMixin"
+    "ChatPrefixTooltipHudMixin",
+    "ChatHistoryCaptureMixin",
+    "KeyboardHandlerMixin"
   ],
   "injectors": {
     "defaultRequire": 1
-  }
+  },
+  "refmap": "rule_helper.refmap.json"
 }

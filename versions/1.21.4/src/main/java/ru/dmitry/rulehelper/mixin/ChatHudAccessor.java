@@ -1,16 +1,20 @@
 package ru.dmitry.rulehelper.mixin;
 
 import java.util.List;
-import net.minecraft.class_338;
-import net.minecraft.class_303.class_7590;
+import net.minecraft.client.gui.components.ChatComponent;
+import net.minecraft.client.GuiMessage.Line;
+import net.minecraft.client.GuiMessage;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(class_338.class)
+@Mixin(value = ChatComponent.class)
 public interface ChatHudAccessor {
-   @Accessor("field_2064")
-   List<class_7590> ruleHelper$getVisibleMessages();
+   @Accessor("trimmedMessages")
+   List<Line> ruleHelper$getVisibleMessages();
 
-   @Accessor("field_2066")
+   @Accessor("allMessages")
+   List<GuiMessage> ruleHelper$getAllMessages();
+
+   @Accessor("chatScrollbarPos")
    int ruleHelper$getScrolledLines();
 }

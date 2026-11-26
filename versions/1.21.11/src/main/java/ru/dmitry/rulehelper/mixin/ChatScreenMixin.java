@@ -1,8 +1,8 @@
 package ru.dmitry.rulehelper.mixin;
 
-import net.minecraft.class_11909;
-import net.minecraft.class_310;
-import net.minecraft.class_408;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ChatScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -14,26 +14,49 @@ import ru.dmitry.rulehelper.ui.DonationSetupScreen;
 import ru.dmitry.rulehelper.ui.PunishmentCorrectionScreen;
 import ru.dmitry.rulehelper.ui.RuleMenuScreen;
 
-@Mixin(class_408.class)
+@Mixin(value = ChatScreen.class)
 public abstract class ChatScreenMixin {
-   @Inject(method = "method_25402", at = @At("HEAD"), cancellable = true)
-   private void ruleHelper$openMenuOnNameClick(class_11909 click, boolean doubled, CallbackInfoReturnable<Boolean> cir) {
-      if (click.method_74245() == 0) {
-         class_310 client = class_310.method_1551();
-         PunishmentAnnouncement announcement = ChatNameHitTest.findPunishment(client, click.comp_4798(), click.comp_4799());
-         if (announcement != null) {
-            client.method_1507(new PunishmentCorrectionScreen(announcement));
+   @Inject(method = "render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V", at = @At("TAIL"))
+   private void ruleHelper$showPrefixPlayerTooltip(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY, float delta,
+                                                   org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+      ru.dmitry.rulehelper.chat.ChatPrefixTooltip.render(graphics, Minecraft.getInstance(), mouseX, mouseY);
+   }
+
+   @Inject(method = "mouseClicked(Lnet/minecraft/client/input/MouseButtonEvent;Z)Z", at = @At("HEAD"), cancellable = true)
+   private void ruleHelper$openMenuOnNameClick(MouseButtonEvent click, boolean doubled, CallbackInfoReturnable<Boolean> cir) {
+      if (click.button() == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
+         Minecraft client = Minecraft.getInstance();
+         String copiedName = ChatNameHitTest.findPunishmentCopyTarget(client, click.x(), click.y());
+         if (copiedName != null) {
+            client.keyboardHandler.setClipboard(copiedName);
+            client.gui.getChat().addMessage(net.minecraft.network.chat.Component.literal("Скопирован ник: " + copiedName)
+               .withStyle(net.minecraft.ChatFormatting.AQUA));
             cir.setReturnValue(true);
             return;
          }
-         String name = ChatNameHitTest.findName(client, click.comp_4798(), click.comp_4799());
+         String menuName = ChatNameHitTest.findMenuNameCopyTarget(client, click.x(), click.y());
+         if (menuName != null) {
+            client.keyboardHandler.setClipboard(menuName);
+            client.gui.getChat().addMessage(net.minecraft.network.chat.Component.literal("Скопирован ник: " + menuName)
+               .withStyle(net.minecraft.ChatFormatting.AQUA));
+            cir.setReturnValue(true);
+            return;
+         }
+         String name = ChatNameHitTest.findPrefixTarget(client, click.x(), click.y());
          if (name != null) {
             if (RuleHelperConfig.isConfigured()) {
-               client.method_1507(new RuleMenuScreen(name));
+               client.setScreen(new RuleMenuScreen(name));
             } else {
-               client.method_1507(new DonationSetupScreen(name));
+               client.setScreen(new DonationSetupScreen(name));
             }
             cir.setReturnValue(true);
+            return;
+         }
+         PunishmentAnnouncement announcement = ChatNameHitTest.findPunishment(client, click.x(), click.y());
+         if (announcement != null) {
+            client.setScreen(new PunishmentCorrectionScreen(announcement));
+            cir.setReturnValue(true);
+            return;
          }
       }
    }

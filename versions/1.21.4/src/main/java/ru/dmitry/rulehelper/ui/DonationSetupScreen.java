@@ -1,65 +1,69 @@
 package ru.dmitry.rulehelper.ui;
 
-import net.minecraft.class_124;
-import net.minecraft.class_2561;
-import net.minecraft.class_332;
-import net.minecraft.class_342;
-import net.minecraft.class_4185;
-import net.minecraft.class_437;
-import net.minecraft.class_7842;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.StringWidget;
 import ru.dmitry.rulehelper.RuleHelperConfig;
+import ru.dmitry.rulehelper.PlayerNames;
 import ru.dmitry.rulehelper.RuleHelperConfig.DonationTier;
 
 /** First-use setup: save the user's own server nickname and declared tier. */
-public final class DonationSetupScreen extends class_437 {
+public final class DonationSetupScreen extends Screen {
    private final String selectedPlayer;
-   private class_342 nicknameInput;
+   private EditBox nicknameInput;
 
    public DonationSetupScreen(String selectedPlayer) {
-      super(class_2561.method_43470("Настройка Rule Helper"));
+      super(Component.literal("Настройка Rule Helper"));
       this.selectedPlayer = selectedPlayer;
    }
 
-   protected void method_25426() {
-      this.addCenteredText(22, class_2561.method_43470("НАСТРОЙКА RULE HELPER").method_27695(new class_124[]{class_124.field_1075, class_124.field_1067}), Math.min(this.field_22789 - 24, 420));
-      this.addCenteredText(43, class_2561.method_43470("Введите ваш ник на сервере — это нужно один раз"), Math.min(this.field_22789 - 24, 500));
-      this.nicknameInput = new class_342(this.field_22793, this.field_22789 / 2 - 110, 64, 220, 20, class_2561.method_43470("Ник на сервере"));
-      this.nicknameInput.method_1877(16);
+   @Override
+   protected void init() {
+      this.addCenteredText(22, Component.literal("НАСТРОЙКА RULE HELPER").withStyle(new ChatFormatting[]{ChatFormatting.AQUA, ChatFormatting.BOLD}), Math.min(this.width - 24, 420));
+      this.addCenteredText(43, Component.literal("Введите ваш ник на сервере — это нужно один раз"), Math.min(this.width - 24, 500));
+      this.nicknameInput = new EditBox(this.font, this.width / 2 - 110, 64, 220, 20, Component.literal("Ник на сервере"));
+      this.nicknameInput.deleteWords(16);
       if (RuleHelperConfig.isConfigured()) {
-         this.nicknameInput.method_1852(RuleHelperConfig.nickname());
+         this.nicknameInput.setValue(RuleHelperConfig.nickname());
       }
-      this.method_37063(this.nicknameInput);
-      this.addCenteredText(91, class_2561.method_43470("Ник: 3–16 символов, латинские буквы, цифры и _"), Math.min(this.field_22789 - 24, 540));
-      this.addCenteredText(117, class_2561.method_43470("Выбирайте только свой уровень доната." ).method_27692(class_124.field_1054), Math.min(this.field_22789 - 24, 520));
-      this.addCenteredText(132, class_2561.method_43470("Выбор чужого уровня нарушает правило 3.4 и может привести к наказанию.").method_27692(class_124.field_1054), Math.min(this.field_22789 - 24, 620));
-      this.addCenteredText(165, class_2561.method_43470("Какой у вас донат?"), Math.min(this.field_22789 - 24, 320));
-      int buttonWidth = Math.min(230, (this.field_22789 - 48) / 2);
-      int leftX = this.field_22789 / 2 - buttonWidth - 6;
-      int rightX = this.field_22789 / 2 + 6;
-      this.method_37063(class_4185.method_46430(class_2561.method_43470("Правитель+"), b -> this.save(DonationTier.LEADER)).method_46434(leftX, 191, buttonWidth, 22).method_46431());
-      this.method_37063(class_4185.method_46430(class_2561.method_43470("Staff-"), b -> this.save(DonationTier.STAFF)).method_46434(rightX, 191, buttonWidth, 22).method_46431());
-      this.addCenteredText(229, class_2561.method_43470("Выбор сохраняется на этом компьютере."), Math.min(this.field_22789 - 24, 420));
+      this.addRenderableWidget(this.nicknameInput);
+      this.addCenteredText(91, Component.literal("Ник: 3–16 латинских букв, цифр и _"), Math.min(this.width - 24, 540));
+      this.addCenteredText(117, Component.literal("Выбирайте только свой уровень доната." ).withStyle(ChatFormatting.YELLOW), Math.min(this.width - 24, 520));
+      this.addCenteredText(132, Component.literal("Выбор чужого уровня нарушает правило 3.4 и может привести к наказанию.").withStyle(ChatFormatting.YELLOW), Math.min(this.width - 24, 620));
+      this.addCenteredText(165, Component.literal("Какой у вас донат?"), Math.min(this.width - 24, 320));
+      int buttonWidth = Math.min(230, (this.width - 48) / 2);
+      int leftX = this.width / 2 - buttonWidth - 6;
+      int rightX = this.width / 2 + 6;
+      this.addRenderableWidget(Button.builder(Component.literal("Правитель+"), b -> this.save(DonationTier.LEADER)).bounds(leftX, 191, buttonWidth, 22).build());
+      this.addRenderableWidget(Button.builder(Component.literal("Staff-"), b -> this.save(DonationTier.STAFF)).bounds(rightX, 191, buttonWidth, 22).build());
+      this.addCenteredText(229, Component.literal("Выбор сохраняется на этом компьютере."), Math.min(this.width - 24, 420));
    }
 
    private void save(DonationTier selectedTier) {
-      String nickname = this.nicknameInput.method_1882().trim();
-      if (!nickname.matches("[A-Za-z0-9_]{3,16}")) {
+      String nickname = this.nicknameInput.getValue().trim();
+      if (!PlayerNames.isValid(nickname)) {
          return;
       }
       RuleHelperConfig.save(nickname, selectedTier);
-      if (this.field_22787 != null) {
-         this.field_22787.method_1507(new RuleMenuScreen(this.selectedPlayer));
+      if (this.minecraft != null) {
+         this.minecraft.setScreen(new RuleMenuScreen(this.selectedPlayer));
       }
    }
 
-   private void addCenteredText(int y, class_2561 text, int maxWidth) {
-      int textWidth = Math.min(this.field_22793.method_27525(text), maxWidth);
-      class_7842 widget = new class_7842(this.field_22789 / 2 - textWidth / 2, y, textWidth, 12, text, this.field_22793);
-      this.method_37063(widget);
+   private void addCenteredText(int y, Component text, int maxWidth) {
+      int textWidth = Math.min(this.font.width(text), maxWidth);
+      StringWidget widget = new StringWidget(this.width / 2 - textWidth / 2, y, textWidth, 12, text, this.font);
+      widget.setMaxWidth(maxWidth);
+      this.addRenderableWidget(widget);
    }
 
-   public void method_25394(class_332 context, int mouseX, int mouseY, float delta) {
-      context.method_25294(0, 0, this.field_22789, this.field_22790, -653652456);
-      super.method_25394(context, mouseX, mouseY, delta);
+   @Override
+   public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+      context.fill(0, 0, this.width, this.height, -653652456);
+      super.render(context, mouseX, mouseY, delta);
    }
 }

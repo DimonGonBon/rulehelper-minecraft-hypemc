@@ -1,93 +1,160 @@
 package ru.dmitry.rulehelper.ui;
 
-import net.minecraft.class_124;
-import net.minecraft.class_2561;
-import net.minecraft.class_332;
-import net.minecraft.class_4185;
-import net.minecraft.class_437;
-import net.minecraft.class_7842;
-import net.minecraft.class_7919;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import ru.dmitry.rulehelper.RuleAction;
 import ru.dmitry.rulehelper.RuleEntry;
 import ru.dmitry.rulehelper.RuleHelperConfig;
+import ru.dmitry.rulehelper.PunishmentScope;
 
-public final class ActionChoiceScreen extends class_437 {
+/** Compact styled action selector for rules with selectable server scope. */
+public final class ActionChoiceScreen extends Screen {
    private final String playerName;
    private final RuleEntry rule;
    private final int previousScroll;
+   private int scopeIndex;
+   private int panelX, panelY, panelWidth, panelHeight;
 
    public ActionChoiceScreen(String playerName, RuleEntry rule, int previousScroll) {
-      super(class_2561.method_43470(rule.code() + " | " + rule.title()));
+      super(Component.literal(rule.code() + " | " + rule.title()));
       this.playerName = playerName;
       this.rule = rule;
       this.previousScroll = previousScroll;
    }
 
-   protected void method_25426() {
-      class_2561 playerLabel = class_2561.method_43470("Игрок: ")
-         .method_27692(class_124.field_1068)
-         .method_10852(class_2561.method_43470(this.playerName).method_27695(new class_124[]{class_124.field_1075, class_124.field_1067}));
-      this.addCenteredText(18, playerLabel, Math.min(this.field_22789 - 24, 520));
-      this.addCenteredText(
-         34,
-         class_2561.method_43470(this.rule.code() + "  |  " + this.rule.title()).method_27695(new class_124[]{class_124.field_1068, class_124.field_1067}),
-         Math.min(this.field_22789 - 24, 520)
-      );
-      int buttonWidth = Math.min(500, this.field_22789 - 36);
-      int x = (this.field_22789 - buttonWidth) / 2;
-      int top = Math.max(70, this.field_22790 / 2 - this.rule.actions().size() * 15);
+   @Override
+   protected void init() {
+      this.panelWidth = Math.min(540, this.width - 24);
+      this.panelHeight = Math.min(490, Math.max(290, 162 + this.rule.actions().size() * 29));
+      this.panelHeight = Math.min(this.panelHeight, this.height - 24);
+      this.panelX = (this.width - this.panelWidth) / 2;
+      this.panelY = (this.height - this.panelHeight) / 2;
+      this.addText(this.panelX + 18, this.panelY + 14,
+         Component.literal("ВЫБОР НАКАЗАНИЯ").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), this.panelWidth - 36, 16);
+      this.addText(this.panelX + 18, this.panelY + 37,
+         Component.literal("Игрок: ").withStyle(ChatFormatting.GRAY)
+            .append(Component.literal(this.playerName).withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)), this.panelWidth - 36, 14);
+      this.addText(this.panelX + 18, this.panelY + 57,
+         Component.literal(this.rule.code() + "  ·  " + this.rule.title()).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD), this.panelWidth - 36, 14);
 
-      for (int i = 0; i < this.rule.actions().size(); i++) {
-         RuleAction action = this.rule.actions().get(i);
-         class_2561 tip = class_2561.method_43470(this.rule.summary())
-            .method_27692(class_124.field_1080)
-            .method_10852(class_2561.method_43470("\nНаказание: ").method_27692(class_124.field_1065))
-            .method_10852(class_2561.method_43470(action.label()).method_27692(class_124.field_1054))
-            .method_10852(class_2561.method_43470("\n" + this.scopedCommand(action)).method_27692(class_124.field_1075));
-         this.method_37063(
-            class_4185.method_46430(class_2561.method_43470(action.label()), b -> this.execute(action))
-               .method_46434(x, top + i * 25, buttonWidth, 20)
-               .method_46436(class_7919.method_47407(tip))
-               .method_46431()
-         );
+      int contentY = this.panelY + 82;
+      int contentWidth = this.panelWidth - 36;
+      int summaryHeight = this.addWrapped(this.rule.summary(), this.panelX + 18, contentY, contentWidth,
+         ChatFormatting.GRAY, 12, 4);
+      int cursorY = Math.max(contentY + 30, summaryHeight + 8);
+      if (this.isLocalRuleOrRelease()) {
+         this.addText(this.panelX + 18, cursorY, Component.literal("РЕЖИМ ВЫДАЧИ")
+            .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), contentWidth, 12);
+         cursorY += 17;
+         PunishmentScope scope = this.scopes()[this.scopeIndex];
+         this.addRenderableWidget(new BlueButton(this.panelX + 18, cursorY, contentWidth, 24,
+            Component.literal(scope.label()).withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), b -> {
+               this.scopeIndex = (this.scopeIndex + 1) % this.scopes().length;
+               this.rebuildWidgets();
+            }));
+         cursorY += 34;
+      } else {
+         this.addText(this.panelX + 18, cursorY, Component.literal("РЕЖИМ ВЫДАЧИ · ГЛОБАЛЬНО (-g)")
+            .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), contentWidth, 12);
+         cursorY += 26;
       }
 
-      this.method_37063(
-         class_4185.method_46430(
-               class_2561.method_43470("← Назад к правилам"), b -> this.field_22787.method_1507(new RuleMenuScreen(this.playerName, this.previousScroll, this))
-            )
-            .method_46434(this.field_22789 / 2 - 78, this.field_22790 - 34, 156, 20)
-            .method_46431()
-      );
+      this.addText(this.panelX + 18, cursorY, Component.literal("ВАРИАНТЫ НАКАЗАНИЯ")
+         .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), contentWidth, 12);
+      cursorY += 17;
+      int buttonWidth = contentWidth;
+      int availableBottom = this.panelY + this.panelHeight - 51;
+      for (RuleAction action : this.rule.actions()) {
+         if (cursorY + 23 > availableBottom) break;
+         String command = this.scopedCommand(action);
+         Component tip = Component.literal(this.rule.punishment()).withStyle(ChatFormatting.YELLOW)
+            .append(Component.literal("\n" + command).withStyle(ChatFormatting.AQUA));
+         this.addRenderableWidget(new BlueButton(this.panelX + 18, cursorY, buttonWidth, 22,
+            Component.literal(action.label()).withStyle(ChatFormatting.WHITE), b -> this.execute(action))
+            .withTooltip(Tooltip.create(tip)));
+         cursorY += 27;
+      }
+      this.addRenderableWidget(new BlueButton(this.panelX + this.panelWidth / 2 - 82,
+         this.panelY + this.panelHeight - 34, 164, 22, Component.literal("← Назад к правилам"), b -> this.back()));
    }
 
-   private void addCenteredText(int y, class_2561 text, int maxWidth) {
-      int textWidth = Math.min(this.field_22793.method_27525(text), maxWidth);
-      this.method_37063(new class_7842(this.field_22789 / 2 - textWidth / 2, y, textWidth, 12, text, this.field_22793).method_73396(maxWidth));
+   private int addWrapped(String value, int x, int y, int width, ChatFormatting color, int lineHeight, int maxLines) {
+      String remaining = value == null ? "" : value;
+      int line = 0;
+      while (!remaining.isEmpty() && line < maxLines) {
+         int end = 0;
+         while (end < remaining.length() && this.font.width(remaining.substring(0, end + 1)) <= width) end++;
+         if (end <= 0) break;
+         if (end < remaining.length()) {
+            int space = remaining.lastIndexOf(' ', end);
+            if (space > 0) end = space;
+         }
+         this.addText(x, y + line * lineHeight, Component.literal(remaining.substring(0, end).strip())
+            .withStyle(color), width, lineHeight);
+         remaining = remaining.substring(end).stripLeading();
+         line++;
+      }
+      return y + line * lineHeight;
+   }
+
+   private void addText(int x, int y, Component text, int maxWidth, int height) {
+      int textWidth = Math.min(this.font.width(text), maxWidth);
+      StringWidget widget = new StringWidget(x, y, textWidth, height, text, this.font);
+      widget.setMaxWidth(maxWidth);
+      this.addRenderableWidget(widget);
    }
 
    private void execute(RuleAction action) {
-      if (this.field_22787 != null && this.field_22787.method_1562() != null) {
+      if (this.minecraft != null && this.minecraft.getConnection() != null) {
          String command = this.scopedCommand(action);
-         this.field_22787.method_1562().method_45730(command.startsWith("/") ? command.substring(1) : command);
-         this.method_25419();
+         this.minecraft.getConnection().sendCommand(command.startsWith("/") ? command.substring(1) : command);
+         this.onClose();
       }
    }
 
    private String scopedCommand(RuleAction action) {
       String command = action.commandFor(this.playerName);
-      return this.rule.code().equals("release") ? command : RuleHelperConfig.applyDonationScope(command, this.rule.code());
-   }
-
-   public void method_25394(class_332 context, int mouseX, int mouseY, float delta) {
-      context.method_25294(0, 0, this.field_22789, this.field_22790, -385217000);
-      context.method_25294(this.field_22789 / 2 - 120, 61, this.field_22789 / 2 + 120, 62, -13181454);
-      super.method_25394(context, mouseX, mouseY, delta);
-   }
-
-   public void method_25419() {
-      if (this.field_22787 != null) {
-         this.field_22787.method_1507(null);
+      if (this.rule.code().equals("release")) {
+         PunishmentScope scope = this.scopes()[this.scopeIndex];
+         return RuleHelperConfig.applyPunishmentScope(command, null,
+            scope == PunishmentScope.RULE_DEFAULT ? PunishmentScope.CURRENT : scope);
       }
+      command = RuleHelperConfig.formatCause(command, this.rule.code(), this.rule.title());
+      if (this.rule.code().startsWith("1.") || this.rule.code().startsWith("2.") || this.rule.code().startsWith("3.")) {
+         return RuleHelperConfig.applyPunishmentScope(command, this.rule.code(), PunishmentScope.RULE_DEFAULT);
+      }
+      return RuleHelperConfig.applyPunishmentScope(command, this.rule.code(), this.scopes()[this.scopeIndex]);
    }
+
+   private boolean isLocalRuleOrRelease() {
+      String code = this.rule.code();
+      return code.equals("release") || code.startsWith("4.") || code.startsWith("5.");
+   }
+
+   private PunishmentScope[] scopes() {
+      return new PunishmentScope[]{PunishmentScope.RULE_DEFAULT, PunishmentScope.SURVIVAL,
+         PunishmentScope.GRIEF, PunishmentScope.MINIGAMES};
+   }
+
+   @Override
+   public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+      graphics.fill(this.panelX - 1, this.panelY - 1, this.panelX + this.panelWidth + 1,
+         this.panelY + this.panelHeight + 1, 0xD908101A);
+      graphics.fill(this.panelX, this.panelY, this.panelX + this.panelWidth,
+         this.panelY + this.panelHeight, 0xD51A2432);
+      graphics.fill(this.panelX, this.panelY, this.panelX + this.panelWidth, this.panelY + 2, 0xFF38C5D2);
+      graphics.fill(this.panelX, this.panelY, this.panelX + 1, this.panelY + this.panelHeight, 0xFF38C5D2);
+      graphics.fill(this.panelX + this.panelWidth - 1, this.panelY, this.panelX + this.panelWidth,
+         this.panelY + this.panelHeight, 0xFF38C5D2);
+      graphics.fill(this.panelX, this.panelY + this.panelHeight - 1, this.panelX + this.panelWidth,
+         this.panelY + this.panelHeight, 0xFF38C5D2);
+      super.render(graphics, mouseX, mouseY, delta);
+   }
+
+   private void back() { if (this.minecraft != null) this.minecraft.setScreen(new RuleMenuScreen(this.playerName, this.previousScroll, this)); }
+   @Override public void onClose() { if (this.minecraft != null) this.minecraft.setScreen(null); }
 }

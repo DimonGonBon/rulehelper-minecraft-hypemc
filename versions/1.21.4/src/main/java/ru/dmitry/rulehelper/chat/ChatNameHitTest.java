@@ -1,156 +1,117 @@
 package ru.dmitry.rulehelper.chat;
 
+import ru.dmitry.rulehelper.PlayerNames;
+
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.class_1041;
-import net.minecraft.class_2561;
-import net.minecraft.class_310;
-import net.minecraft.class_327;
-import net.minecraft.class_338;
-import net.minecraft.class_5481;
-import net.minecraft.class_303.class_7590;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.components.ChatComponent;
+import net.minecraft.client.GuiMessage.Line;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import ru.dmitry.rulehelper.mixin.ChatHudAccessor;
 
 public final class ChatNameHitTest {
-   private ChatNameHitTest() {
+   private ChatNameHitTest() {}
+
+   public static String findName(Minecraft client, double mouseX, double mouseY) {
+      Hit hit = hit(client, mouseX, mouseY);
+      return hit == null ? null : findTokenAt(client.font, hit.line().content(), hit.x());
    }
 
-   public static String findName(class_310 var0, double var1, double var3) {
-      if (var0 != null && var0.field_1705 != null) {
-         class_1041 var5 = var0.method_22683();
-         if (var5 == null) {
-            return null;
-         }
-
-         class_338 var6 = var0.field_1705.method_1743();
-         if (var6 instanceof ChatHudAccessor var7) {
-            List var8 = var7.ruleHelper$getVisibleMessages();
-            if (var8 != null && !var8.isEmpty()) {
-               double var9 = (Double)var0.field_1690.method_42554().method_41753();
-               double var11 = (Double)var0.field_1690.method_42546().method_41753();
-               if (var9 <= 0.0) {
-                  return null;
-               }
-
-               int var13 = Math.max(0, var7.ruleHelper$getScrolledLines());
-               int var14 = Math.min(var6.method_1813(), var8.size() - var13);
-               if (var14 <= 0) {
-                  return null;
-               }
-
-               double var15 = Math.floor((var5.method_4502() - 40.0) / var9);
-               double var17 = Math.round(8.0 * (1.0 + var11) - 4.0 * var11);
-               double var19 = 9.0 * (1.0 + var11);
-               double var21 = var1 / var9 - 4.0;
-               class_327 var23 = var0.field_1772;
-
-               for (int var24 = 0; var24 < var14; var24++) {
-                  double var25 = (var15 - var24 * var19 - var17) * var9;
-                  if (var3 >= var25 && var3 < var25 + 9.0 * var9) {
-                     int var27 = var24 + var13;
-                     return findTokenAt(var23, ((class_7590)var8.get(var27)).comp_896(), var21);
-                  }
-               }
-
-               return null;
-            } else {
-               return null;
-            }
-         } else {
-            return null;
-         }
-      } else {
-         return null;
-      }
+   /** Only the explicit RuleHelper marker opens the punishment menu; the nick text stays inert. */
+   public static String findPrefixTarget(Minecraft client, double mouseX, double mouseY) {
+      Hit hit = hit(client, mouseX, mouseY);
+      if (hit == null) return null;
+      String prefix = ru.dmitry.rulehelper.RuleHelperConfig.chatMenuPrefix();
+      String message = hit.message();
+      if (prefix.isBlank() || !message.startsWith(prefix + " ")) return null;
+      double prefixWidth = client.font.width(Component.literal(prefix + " "));
+      if (hit.x() >= prefixWidth) return null;
+      return ru.dmitry.rulehelper.chat.ChatMenuPrefix.sender(message.substring(prefix.length() + 1));
    }
 
-   /** Matches only a complete, exact punishment announcement on the clicked chat row. */
-   public static PunishmentAnnouncement findPunishment(class_310 client, double mouseX, double mouseY) {
-      if (client == null || client.field_1705 == null) return null;
-      class_1041 window = client.method_22683();
-      if (window == null) return null;
-      class_338 chat = client.field_1705.method_1743();
-      if (!(chat instanceof ChatHudAccessor accessor)) return null;
-      List lines = accessor.ruleHelper$getVisibleMessages();
-      if (lines == null || lines.isEmpty()) return null;
-      double scale = (Double)client.field_1690.method_42554().method_41753();
-      double lineSpacing = (Double)client.field_1690.method_42546().method_41753();
-      if (scale <= 0.0) return null;
-      int scroll = Math.max(0, accessor.ruleHelper$getScrolledLines());
-      int visibleCount = Math.min(chat.method_1813(), lines.size() - scroll);
-      if (visibleCount <= 0) return null;
-      double top = Math.floor((window.method_4502() - 40.0) / scale);
-      double firstLineOffset = Math.round(8.0 * (1.0 + lineSpacing) - 4.0 * lineSpacing);
-      double rowHeight = 9.0 * (1.0 + lineSpacing);
-      int row = -1;
-      for (int visibleRow = 0; visibleRow < visibleCount; visibleRow++) {
-         double lineY = (top - visibleRow * rowHeight - firstLineOffset) * scale;
-         if (mouseY >= lineY && mouseY < lineY + 9.0 * scale) {
-            row = visibleRow;
-            break;
-         }
-      }
-      if (row < 0) return null;
-      int clickedIndex = scroll + row;
+   /** The message sender's actual name is a separate copy target; clicking the marker still opens the menu. */
+   public static String findMenuNameCopyTarget(Minecraft client, double mouseX, double mouseY) {
+      Hit hit = hit(client, mouseX, mouseY);
+      if (hit == null) return null;
+      String prefix = ru.dmitry.rulehelper.RuleHelperConfig.chatMenuPrefix();
+      if (prefix.isBlank()) return null;
+      String message = hit.message();
+      if (!message.startsWith(prefix + " ")) return null;
+      String sender = ru.dmitry.rulehelper.chat.ChatMenuPrefix.sender(message.substring(prefix.length() + 1));
+      if (sender == null || hit.x() < client.font.width(Component.literal(prefix + " "))) return null;
+      String hoveredName = findTokenAt(client.font, hit.line().content(), hit.x(), true);
+      return sender.equalsIgnoreCase(hoveredName) ? sender : null;
+   }
 
-      // ChatHud stores wrapped lines bottom-to-top. Keep reconstruction inside
-      // the clicked entry: stop when its final wrapped line is reached, and
-      // never append text from the neighboring chat entry.
-      int first = Math.max(scroll, clickedIndex - 6);
-      int last = Math.min(scroll + visibleCount - 1, clickedIndex + 6);
-      for (int prefixIndex = first; prefixIndex <= last; prefixIndex++) {
-         class_7590 prefixLine = (class_7590)lines.get(prefixIndex);
-         String firstLine = orderedLineText(prefixLine.comp_896()).stripLeading();
-         if (!PunishmentAnnouncement.startsAnnouncement(firstLine)) continue;
-         int entryTime = prefixLine.comp_895();
-         StringBuilder candidate = new StringBuilder(firstLine);
-         for (int parts = 1; parts <= 7 && prefixIndex - (parts - 1) >= scroll; parts++) {
-            int lastPart = prefixIndex - (parts - 1);
-            class_7590 visibleLine = (class_7590)lines.get(lastPart);
-            if (visibleLine.comp_895() != entryTime) break;
-            if (parts > 1) {
-               candidate.append(' ').append(orderedLineText(visibleLine.comp_896()));
-            }
-            PunishmentAnnouncement parsed = PunishmentAnnouncement.parse(candidate.toString());
-            if (parsed != null && clickedIndex >= lastPart && clickedIndex <= prefixIndex) return parsed;
-            // endOfEntry marks the last wrapped row of this source message.
-            // Do not continue into an adjacent message, even if its text makes
-            // the punishment regex match.
-            if (visibleLine.comp_898()) break;
-         }
-      }
+   public static PunishmentAnnouncement findPunishment(Minecraft client, double mouseX, double mouseY) {
+      Hit hit = hit(client, mouseX, mouseY);
+      if (hit == null) return null;
+      // 26.3 exposes the original message for each wrapped row. Parse that exact
+      // message rather than reconstructing it from neighboring visible rows.
+      return PunishmentAnnouncement.parse(hit.message());
+   }
+
+   /** Resolve the actor or target label at the beginning of a punishment row. */
+   public static String findPunishmentCopyTarget(Minecraft client, double mouseX, double mouseY) {
+      Hit hit = hit(client, mouseX, mouseY);
+      if (hit == null) return null;
+      PunishmentAnnouncement announcement = PunishmentAnnouncement.parse(hit.message());
+      if (announcement == null) return null;
+      String visiblePrefix = formattedText(hit.line().content());
+      if (!visiblePrefix.startsWith(PunishmentCopyPrefixes.ISSUER_LABEL + " " + PunishmentCopyPrefixes.TARGET_LABEL + " ")) return null;
+      String part = PunishmentCopyPrefixes.targetAt(hit.x(), client.font);
+      if ("issuer".equals(part)) return announcement.issuer();
+      if ("target".equals(part)) return announcement.target();
       return null;
    }
 
-   private static String orderedLineText(class_5481 text) {
-      StringBuilder result = new StringBuilder();
-      text.accept((index, style, codePoint) -> {
-         result.appendCodePoint(codePoint);
-         return true;
-      });
-      return result.toString();
+   private static String formattedText(FormattedCharSequence sequence) {
+      StringBuilder text = new StringBuilder();
+      sequence.accept((index, style, codePoint) -> { text.appendCodePoint(codePoint); return true; });
+      return text.toString();
    }
 
-   private static boolean hasClickableComponentAt(class_327 renderer, class_5481 text, double x) {
-      int[] cursor = {0};
-      boolean[] clickable = {false};
-      text.accept((index, style, codePoint) -> {
-         String character = new String(Character.toChars(codePoint));
-         int width = renderer.method_27525(class_2561.method_43470(character).method_10862(style));
-         if (x >= cursor[0] && x < cursor[0] + width && style.method_10970() != null) clickable[0] = true;
-         cursor[0] += Math.max(0, width);
-         return true;
-      });
-      return clickable[0];
+   private static Hit hit(Minecraft client, double mouseX, double mouseY) {
+      if (client == null || client.gui == null || client.getWindow() == null) return null;
+      ChatComponent chat = client.gui.getChat();
+      if (!(chat instanceof ChatHudAccessor accessor)) return null;
+      List<Line> lines = accessor.ruleHelper$getVisibleMessages();
+      int scroll = Math.max(0, accessor.ruleHelper$getScrolledLines());
+      int count = Math.min(chat.getLinesPerPage(), lines.size() - scroll);
+      float scale = client.options.chatScale().get().floatValue();
+      double spacing = client.options.chatLineSpacing().get();
+      int row = ChatRowGeometry.rowAt(mouseY, client.getWindow().getGuiScaledHeight(), scale,
+         spacing, client.font.lineHeight, count);
+      if (row < 0) return null;
+      Line line = lines.get(scroll + row);
+      double x = mouseX / scale - 4.0;
+      if (x < 0 || x >= client.font.width(line.content())) return null;
+      int index = scroll + row;
+      int bottom = index;
+      while (bottom > 0 && !lines.get(bottom).endOfEntry()) bottom--;
+      int top = index;
+      while (top + 1 < lines.size() && !lines.get(top + 1).endOfEntry()) top++;
+      StringBuilder original = new StringBuilder();
+      for (int i = top; i >= bottom; i--) original.append(formattedText(lines.get(i).content()));
+      return new Hit(line, x, original.toString());
    }
 
-   private static String findTokenAt(class_327 var0, class_5481 var1, double var2) {
-      ArrayList var4 = new ArrayList();
+   private record Hit(Line line, double x, String message) {}
+
+   private static String findTokenAt(Font var0, FormattedCharSequence var1, double var2) {
+      return findTokenAt(var0, var1, var2, false);
+   }
+
+   private static String findTokenAt(Font var0, FormattedCharSequence var1, double var2, boolean allowClickable) {
+      ArrayList<Glyph> var4 = new ArrayList<>();
       int[] var5 = new int[]{0};
       var1.accept((var3, var4x, var5x) -> {
          String var6x = new String(Character.toChars(var5x));
-         int var7x = var0.method_27525(class_2561.method_43470(var6x).method_10862(var4x));
-         var4.add(new ChatNameHitTest.Glyph(var6x, var5[0], var5[0] + Math.max(0, var7x), var4x.method_10970() != null));
+         int var7x = var0.width(Component.literal(var6x).setStyle(var4x));
+         var4.add(new ChatNameHitTest.Glyph(var6x, var5[0], var5[0] + Math.max(0, var7x), var4x.getClickEvent() != null));
          var5[0] += Math.max(0, var7x);
          return true;
       });
@@ -161,7 +122,7 @@ public final class ChatNameHitTest {
          if (var2 >= var8.start && var2 < var8.end && isNameChar(var8.text)) {
             // Respect clickable chat components (e.g. WorldGuard [Add] buttons).
             // RuleHelper should only intercept ordinary player-name clicks.
-            if (var8.clickable) {
+            if (var8.clickable && !allowClickable) {
                return null;
             }
             var6 = var7;
@@ -193,7 +154,7 @@ public final class ChatNameHitTest {
          }
 
          String var14 = var10.toString();
-         return var14.matches("[A-Za-z0-9_]{3,16}") ? var14 : null;
+         return PlayerNames.isValid(var14) ? var14 : null;
       } else {
          return null;
       }
