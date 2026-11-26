@@ -6,9 +6,9 @@ import ru.dmitry.rulehelper.PunishmentScope;
 
 public final class PortRegressionTest {
    public static void main(String[] args) {
-      require(RuleCatalog.ALL.size() == 26, "Donor menu should include 26 rules");
-      require(RuleCatalog.ALL.stream().noneMatch(rule -> rule.code().equals("1.3") || rule.code().equals("4.1")),
-         "Rules 1.3 and 4.1 are excluded from donor build");
+      require(RuleCatalog.ALL.size() == 28, "Moderator menu should include all 28 rules");
+      require(RuleCatalog.ALL.stream().anyMatch(rule -> rule.code().equals("1.3")) && RuleCatalog.ALL.stream().anyMatch(rule -> rule.code().equals("4.1")),
+         "Moderator rules 1.3 and 4.1 are present");
       require(RuleCatalog.ALL.stream().allMatch(rule -> !rule.actions().isEmpty()),
          "Every donor-visible rule has at least one punishment choice");
       int clicks = 0;
@@ -43,9 +43,9 @@ public final class PortRegressionTest {
       require(PunishmentScope.fromAnnouncementMode("мини-игры") == PunishmentScope.MINIGAMES, "minigames mode");
       require(PunishmentScope.fromAnnouncementMode("глобальный") == PunishmentScope.GLOBAL, "global mode");
       require(PunishmentScope.fromAnnouncementMode("неизвестный") == null, "unknown mode");
-      require(PunishmentScope.GRIEF.applyToCommand("/unban player nekk")
+      require(ru.dmitry.rulehelper.PunishmentScopeFormatter.apply("/unban player nekk", null, PunishmentScope.GRIEF, ru.dmitry.rulehelper.RuleHelperConfig.DonationTier.LEADER)
          .equals("/unban player nekk server:гриферский"), "release targets announcement mode");
-      require(PunishmentScope.SURVIVAL.applyToCommand("/unmute player nekk -g")
+      require(ru.dmitry.rulehelper.PunishmentScopeFormatter.apply("/unmute player nekk -g", null, PunishmentScope.SURVIVAL, ru.dmitry.rulehelper.RuleHelperConfig.DonationTier.LEADER)
          .equals("/unmute player nekk server:выживание"), "release replaces prior selector");
       require(ModerationAlertDetector.familyInsult("Игрок Steve ⇨ Батя твой ебанат") != null,
          "family insult alert covers father insult");
