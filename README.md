@@ -24,7 +24,7 @@
 4. Переместите JAR в папку `mods` выбранной игровой установки. Если папки нет, создайте её:
    - **Windows:** `%appdata%\\.minecraft\\mods`
    - **macOS:** `~/Library/Application Support/minecraft/mods`
-   - **Linux:** `~/.minecraft/minecraft/mods`
+   - **Linux:** `~/.minecraft/mods`
    - В стороннем лаунчере используйте папку `mods` именно этого игрового профиля.
 5. В лаунчере выберите профиль **Fabric Loader** с той же версией Minecraft и запустите игру.
 
