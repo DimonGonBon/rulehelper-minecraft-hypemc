@@ -2,6 +2,13 @@
   "required": true,
   "package": "ru.dmitry.rulehelper.mixin",
   "compatibilityLevel": "JAVA_21",
-  "client": ["ChatScreenMixin", "ChatHudAccessor"],
-  "injectors": { "defaultRequire": 1 }
+  "client": [
+    "ChatScreenMixin",
+    "ChatHudAccessor",
+    "ShistCommandMixin",
+    "ShistOutputMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
 }

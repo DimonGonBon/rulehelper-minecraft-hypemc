@@ -1,4 +1,4 @@
-# Build and publish RuleHelper v1.2.1
+# Build and publish RuleHelper v1.2.2
 name: Build RuleHelper
 
 on:
@@ -34,7 +34,7 @@ jobs:
         shell: bash
         working-directory: ${{ matrix.project }}
         run: |
-          source_jar="$(find build/libs -maxdepth 1 -type f -name '*-1.2.1.jar' ! -name '*-sources-1.2.1.jar' -print -quit)"
+          source_jar="$(find build/libs -maxdepth 1 -type f -name '*-1.2.2.jar' ! -name '*-sources-1.2.2.jar' -print -quit)"
           test -n "$source_jar"
           cp "$source_jar" "$GITHUB_WORKSPACE/${{ matrix.artifact }}"
       - name: Upload JAR
@@ -45,7 +45,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: Publish v1.2.1 release
+    name: Replace JARs in v1.2.1 release
     if: >-
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
@@ -81,6 +81,7 @@ jobs:
               '',
               'Добавлен экран проверки объявлений о наказаниях с отдельными полями выдавшего и получившего игрока, причины, срока и режима, а также красным предупреждением. Добавлена коррекция некорректных банов и мутов по правилу 3.4.',
               'Исправлено определение выбранного наказания при клике по объявлению: многострочные сообщения собираются без текста соседних сообщений чата.',
+              'В версиях Minecraft 1.21.11 и 1.21.4 ответ на `/shist <свой ник>` скрывается из чата; история другого игрока продолжает выводиться.',
             ].join('\n');
 
             let release;
