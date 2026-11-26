@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "rule_helper_moderator",
+  "version": "1.3.6-moderator",
+  "name": "Rule Helper — Moderation",
+  "description": "Moderation tools with rule selection, punishment history and focused chat alerts.",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "ru.dmitry.rulehelper.RuleHelperClient"
+    ]
+  },
+  "mixins": [
+    {
+      "config": "rule_helper.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~1.21.4",
+    "java": ">=21"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "ru.dmitry.rulehelper.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "ChatScreenMixin",
+    "ChatPrefixTooltipHudMixin",
+    "ChatHudAccessor",
+    "ChatHistoryCaptureMixin",
+    "KeyboardHandlerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "refmap": "rule_helper.refmap.json"
+}
