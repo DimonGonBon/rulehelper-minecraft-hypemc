@@ -1,12 +1,21 @@
 {
   "schemaVersion": 1,
   "id": "rule_helper",
-  "version": "1.3.5",
+  "version": "2.0.0",
   "name": "Rule Helper",
-  "description": "Donator edition: rule selection, saved donation tier, cause styles, and mode-aware punishment release.",
+  "description": "Donator edition: custom reason templates, rule menus, daily punishment history and ban/mute/warn/kick review.",
   "environment": "client",
-  "entrypoints": { "client": ["ru.dmitry.rulehelper.RuleHelperClient"] },
-  "mixins": [{ "config": "rule_helper.mixins.json", "environment": "client" }],
+  "entrypoints": {
+    "client": [
+      "ru.dmitry.rulehelper.RuleHelperClient"
+    ]
+  },
+  "mixins": [
+    {
+      "config": "rule_helper.mixins.json",
+      "environment": "client"
+    }
+  ],
   "depends": {
     "fabricloader": ">=0.20.1",
     "minecraft": "~26.3",

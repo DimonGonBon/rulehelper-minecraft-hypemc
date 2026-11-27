@@ -3,69 +3,67 @@ package ru.dmitry.rulehelper.ui;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import ru.dmitry.rulehelper.CauseFormatter;
 import ru.dmitry.rulehelper.RuleHelperConfig;
 
-/** Cause formatting preview and selector. */
+/** Shared style selector with live punishment and release previews. */
 public final class CauseStyleScreen extends Screen {
    private final Screen parent;
    private int panelX, panelY, panelWidth, panelHeight;
 
    public CauseStyleScreen(Screen parent) {
-      super(Component.literal("Варианты причины"));
+      super(Component.literal("Шрифт и стиль причины"));
       this.parent = parent;
    }
 
    @Override
    protected void init() {
-      this.panelWidth = Math.min(670, this.width - 24);
-      this.panelHeight = Math.min(365, this.height - 24);
+      this.panelWidth = Math.min(680, this.width - 24);
+      this.panelHeight = Math.min(350, this.height - 24);
       this.panelX = (this.width - this.panelWidth) / 2;
       this.panelY = (this.height - this.panelHeight) / 2;
-      this.addCentered(this.panelY + 16, Component.literal("СТИЛЬ ПРИЧИНЫ")
-         .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), this.panelWidth - 32, 16);
-      this.addCentered(this.panelY + 38, Component.literal("Выбери, как RuleHelper будет оформлять причину в команде")
-         .withStyle(ChatFormatting.GRAY), this.panelWidth - 32, 14);
-      this.addCentered(this.panelY + 60, Component.literal("Пример: 3.4 | Некорректные наказания")
-         .withStyle(ChatFormatting.WHITE), this.panelWidth - 32, 14);
+      this.addCentered(this.panelY + 12, Component.literal("ШРИФТ И СТИЛЬ ПРИЧИНЫ")
+         .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), this.panelWidth - 24, 14);
+      this.addCentered(this.panelY + 32, Component.literal("Наказание и снятие · предпросмотр выбранного стиля")
+         .withStyle(ChatFormatting.GRAY), this.panelWidth - 24, 12);
+      this.addCentered(this.panelY + 51, ReasonComponents.fromCodes(punishmentPreview(RuleHelperConfig.causeStyle())),
+         this.panelWidth - 32, 13);
+      this.addCentered(this.panelY + 68, ReasonComponents.fromCodes(
+         RuleHelperConfig.formatReleaseCause()), this.panelWidth - 32, 13);
 
       RuleHelperConfig.CauseStyle[] styles = RuleHelperConfig.CauseStyle.values();
-      int gapX = 10;
-      int colWidth = (this.panelWidth - 40 - gapX) / 2;
-      int left = this.panelX + 15;
-      int top = this.panelY + 91;
-      int rowPitch = 69;
+      int rows = (styles.length + 1) / 2;
+      int rowPitch = Math.min(45, Math.max(20, (this.panelHeight - 126) / rows));
+      int colWidth = (this.panelWidth - 42) / 2;
       for (int i = 0; i < styles.length; i++) {
          RuleHelperConfig.CauseStyle style = styles[i];
-         int x = left + (i % 2) * (colWidth + gapX);
-         int y = top + (i / 2) * rowPitch;
+         int x = this.panelX + 16 + (i % 2) * (colWidth + 10);
+         int y = this.panelY + 92 + (i / 2) * rowPitch;
          boolean selected = style == RuleHelperConfig.causeStyle();
-         Component label = Component.literal((selected ? "✓  " : "") + style.label())
+         Component label = Component.literal((selected ? "✓ " : "") + style.label())
             .withStyle(selected ? new ChatFormatting[]{ChatFormatting.AQUA, ChatFormatting.BOLD}
                : new ChatFormatting[]{ChatFormatting.WHITE});
-         this.addRenderableWidget(new BlueButton(x, y, colWidth, 24, label, b -> {
-            RuleHelperConfig.setCauseStyle(style);
-            this.minecraft.setScreen(this.parent);
-         }));
-         this.addCentered(y + 32, Component.literal(preview(style)).withStyle(
-            selected ? new ChatFormatting[]{ChatFormatting.AQUA, ChatFormatting.BOLD}
-               : new ChatFormatting[]{ChatFormatting.GRAY}), colWidth, 14);
+         Component tooltip = ReasonComponents.fromCodes(punishmentPreview(style))
+            .copy().append(Component.literal("\n"))
+            .append(ReasonComponents.fromCodes(CauseFormatter.releaseReason(style.name(), RuleHelperConfig.reasonTemplates())));
+         this.addRenderableWidget(new BlueButton(x, y, colWidth, Math.min(27, rowPitch - 3), label, b -> {
+            if (style == RuleHelperConfig.CauseStyle.CUSTOM) {
+               this.minecraft.setScreen(new CustomReasonScreen(this));
+            } else {
+               RuleHelperConfig.setCauseStyle(style);
+               this.rebuildWidgets();
+            }
+         }).withTooltip(Tooltip.create(tooltip)));
       }
-      this.addRenderableWidget(new BlueButton(this.width / 2 - 64,
-         this.panelY + this.panelHeight - 32, 128, 22, Component.literal("← Назад"),
-         b -> this.minecraft.setScreen(this.parent)));
+      this.addRenderableWidget(new BlueButton(this.width / 2 - 78,
+         this.panelY + this.panelHeight - 30, 156, 22, Component.literal("Готово · Назад"), b -> this.onClose()));
    }
 
-   private static String preview(RuleHelperConfig.CauseStyle style) {
-      return switch (style) {
-         case SHORT -> "3.4";
-         case EXTENDED -> "3.4 | Некорректные наказания";
-         case CORNER -> "「 3.4 | Некорректные наказания 」";
-         case DOUBLE_CORNER -> "『 3.4 | Некорректные наказания 』";
-         case SPARKLE -> "✦「 3.4 | Некорректные наказания 」✦";
-         case BOX -> "【 3.4 | Некорректные наказания 】";
-      };
+   private static String punishmentPreview(RuleHelperConfig.CauseStyle style) {
+      return CauseFormatter.reason("2.3", "Оскорбительное поведение", null, false, style.name(), RuleHelperConfig.reasonTemplates());
    }
 
    private void addCentered(int y, Component text, int maxWidth, int height) {
@@ -74,6 +72,8 @@ public final class CauseStyleScreen extends Screen {
       widget.setMaxWidth(maxWidth);
       this.addRenderableWidget(widget);
    }
+
+   @Override public void onClose() { this.minecraft.setScreen(this.parent); }
 
    @Override
    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {

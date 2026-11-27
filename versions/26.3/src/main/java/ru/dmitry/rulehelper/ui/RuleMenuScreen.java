@@ -207,7 +207,7 @@ public final class RuleMenuScreen extends Screen {
          this.addRenderableWidget(new BlueButton(buttonX, buttonY, buttonWidth, 20,
             Component.literal(this.compactActionLabel(selected.code(), i, action.label())),
             b -> this.selectAction(selected, action))
-            .withTooltip(Tooltip.create(Component.literal(command).withStyle(ChatFormatting.AQUA))));
+            .withTooltip(Tooltip.create(ReasonComponents.fromCodes(command))));
       }
    }
 
@@ -232,7 +232,7 @@ public final class RuleMenuScreen extends Screen {
 
    private void actionButton(String label, String command, int x, int y, int width, Runnable action) {
       this.addRenderableWidget(new BlueButton(x, y, width, 22, Component.literal(label), b -> action.run())
-         .withTooltip(Tooltip.create(Component.literal(command).withStyle(ChatFormatting.AQUA))));
+         .withTooltip(Tooltip.create(ReasonComponents.fromCodes(command))));
    }
 
    private String compactActionLabel(String code, int index, String original) {
@@ -368,7 +368,7 @@ public final class RuleMenuScreen extends Screen {
       for (RuleAction action : rule.actions()) {
          String command = this.commandFor(rule, action);
          result = result.append(Component.literal("\n" + action.label() + ": ").withStyle(ChatFormatting.GRAY))
-            .append(Component.literal(command).withStyle(ChatFormatting.AQUA));
+            .append(ReasonComponents.fromCodes(command));
       }
       return result;
    }

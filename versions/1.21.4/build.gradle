@@ -2,7 +2,7 @@ plugins {
     id 'fabric-loom' version '1.14.10'
 }
 
-version = '1.3.6'
+version = '2.0.0'
 group = 'ru.dmitry'
 
 base {
@@ -39,3 +39,31 @@ check.dependsOn portRegressionTest
 
 tasks.named('test') { failOnNoDiscoveredTests = false }
 loom { mixin { defaultRefmapName = 'rule_helper.refmap.json' } }
+
+tasks.register('reasonStyleTest', JavaExec) {
+ dependsOn testClasses
+ classpath = sourceSets.test.runtimeClasspath
+ mainClass = 'ru.dmitry.rulehelper.ReasonStyleTest'
+}
+check.dependsOn reasonStyleTest
+
+tasks.register('punishmentCorrectionTest', JavaExec) {
+ dependsOn testClasses
+ classpath = sourceSets.test.runtimeClasspath
+ mainClass = 'ru.dmitry.rulehelper.PunishmentCorrectionTest'
+}
+check.dependsOn punishmentCorrectionTest
+
+tasks.register('customReasonTest', JavaExec) {
+ dependsOn testClasses
+ classpath = sourceSets.test.runtimeClasspath
+ mainClass = 'ru.dmitry.rulehelper.CustomReasonTest'
+}
+check.dependsOn customReasonTest
+
+tasks.register('donatorScopeTest', JavaExec) {
+ dependsOn testClasses
+ classpath = sourceSets.test.runtimeClasspath
+ mainClass = 'ru.dmitry.rulehelper.DonatorScopeTest'
+}
+check.dependsOn donatorScopeTest

@@ -1,6 +1,4 @@
-# Build and publish RuleHelper v1.3.6
-name: Build RuleHelper
-
+name: Build and publish RuleHelper Donator 2.0
 on:
   push:
   pull_request:
@@ -8,120 +6,94 @@ on:
 
 jobs:
   build:
-    name: Minecraft ${{ matrix.minecraft }}
+    name: Donator Minecraft ${{ matrix.minecraft }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - minecraft: 1.21.11
-            project: versions/1.21.11
-            artifact: RuleHelper-1.21.11-Fabric.jar
-          - minecraft: 1.21.4
-            project: versions/1.21.4
-            artifact: RuleHelper-1.21.4-Fabric.jar
+          - minecraft: '26.3'
+            java: '25'
+          - minecraft: '1.21.11'
+            java: '21'
+          - minecraft: '1.21.4'
+            java: '21'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: ${{ matrix.java }}
       - uses: gradle/actions/setup-gradle@v4
-      - name: Build mod
-        working-directory: ${{ matrix.project }}
+      - name: Build and run regression checks
+        working-directory: versions/${{ matrix.minecraft }}
         run: ./gradlew --no-daemon clean build
-      - name: Stage JAR with release filename
+      - name: Verify donor identity and stage release JAR
         shell: bash
-        working-directory: ${{ matrix.project }}
+        working-directory: versions/${{ matrix.minecraft }}
         run: |
-          source_jar="$(find build/libs -maxdepth 1 -type f -name '*-1.3.6.jar' ! -name '*-sources-1.3.6.jar' -print -quit)"
-          test -n "$source_jar"
-          cp "$source_jar" "$GITHUB_WORKSPACE/${{ matrix.artifact }}"
-      - name: Upload JAR
-        uses: actions/upload-artifact@v4
+          source_jar="build/libs/RuleHelper-${{ matrix.minecraft }}-Fabric-2.0.0.jar"
+          python "$GITHUB_WORKSPACE/.github/scripts/verify_donator_jar.py" "$source_jar" '${{ matrix.minecraft }}'
+          cp "$source_jar" "$GITHUB_WORKSPACE/RuleHelper-${{ matrix.minecraft }}-Fabric.jar"
+      - uses: actions/upload-artifact@v4
         with:
-          name: RuleHelper-Minecraft-${{ matrix.minecraft }}
-          path: ${{ matrix.artifact }}
+          name: RuleHelper-Donator-2.0.0-${{ matrix.minecraft }}
+          path: RuleHelper-${{ matrix.minecraft }}-Fabric.jar
           if-no-files-found: error
 
   release:
-    name: Replace JARs in v1.2.1 release
-    if: >-
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      contains(github.event.head_commit.message, '[publish-release]')
+    name: Publish one release with all three donor builds
     needs: build
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      contains(github.event.head_commit.message, '[publish-major]')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Download both JARs
-        uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
-          pattern: RuleHelper-Minecraft-*
+          pattern: RuleHelper-Donator-2.0.0-*
           path: release-assets
           merge-multiple: true
-      - name: Update existing GitHub Release and upload JARs
+      - name: Verify all three downloaded builds
+        run: |
+          python .github/scripts/verify_donator_jar.py release-assets/RuleHelper-26.3-Fabric.jar 26.3
+          python .github/scripts/verify_donator_jar.py release-assets/RuleHelper-1.21.11-Fabric.jar 1.21.11
+          python .github/scripts/verify_donator_jar.py release-assets/RuleHelper-1.21.4-Fabric.jar 1.21.4
+      - name: Upload three JARs and publish the major release
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const tag_name = 'v1.2.1';
-            const files = [
-              'RuleHelper-1.21.11-Fabric.jar',
-              'RuleHelper-1.21.4-Fabric.jar',
-            ];
-            const body = [
-              'Донатерская версия 1.3.6: полный перенос актуальной версии 26.3 на Minecraft 1.21.11 и 1.21.4.',
-              '',
-              '- Minecraft 1.21.11: `RuleHelper-1.21.11-Fabric.jar`',
-              '- Minecraft 1.21.4: `RuleHelper-1.21.4-Fabric.jar`',
-              '',
-              'Добавлен экран проверки объявлений о наказаниях с отдельными полями выдавшего и получившего игрока, причины, срока и режима, а также красным предупреждением. Добавлена коррекция некорректных банов и мутов по правилу 3.4.',
-              'Исправлено определение выбранного наказания при клике по объявлению: многострочные сообщения собираются без текста соседних сообщений чата.',
-              'В версиях Minecraft 1.21.11 и 1.21.4 ответ на `/shist <свой ник>` скрывается из чата; история другого игрока продолжает выводиться.',
-            ].join('\n');
-
+            const { owner, repo } = context.repo;
+            const tag = 'v2.0.0';
+            const name = 'RuleHelper 2.0 — большое обновление для донатеров';
+            const body = fs.readFileSync('RELEASE_NOTES.md', 'utf8');
+            const files = ['RuleHelper-26.3-Fabric.jar', 'RuleHelper-1.21.11-Fabric.jar', 'RuleHelper-1.21.4-Fabric.jar'];
             let release;
             try {
-              const result = await github.rest.repos.getReleaseByTag({ owner, repo, tag: tag_name });
-              release = result.data;
-              const updated = await github.rest.repos.updateRelease({
-                owner, repo, release_id: release.id,
-                name: 'RuleHelper v1.2.1',
-                body,
-                draft: false,
-                prerelease: false,
-                make_latest: 'true',
-              });
-              release = updated.data;
+              release = (await github.rest.repos.getReleaseByTag({owner, repo, tag})).data;
             } catch (error) {
               if (error.status !== 404) throw error;
-              const result = await github.rest.repos.createRelease({
-                owner, repo, tag_name, target_commitish: context.sha,
-                name: 'RuleHelper v1.2.1', body,
-                draft: false, prerelease: false,
-              });
-              release = result.data;
+              release = (await github.rest.repos.createRelease({
+                owner, repo, tag_name: tag, target_commitish: context.sha,
+                name, body, draft: true, prerelease: false,
+              })).data;
             }
-
-            const { data: existingAssets } = await github.rest.repos.listReleaseAssets({
-              owner, repo, release_id: release.id, per_page: 100,
-            });
-            for (const name of files) {
-              const filePath = `release-assets/${name}`;
-              if (!fs.existsSync(filePath)) throw new Error(`Missing release file: ${filePath}`);
-              for (const asset of existingAssets.filter(item => item.name === name)) {
-                await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: asset.id });
+            const assets = (await github.rest.repos.listReleaseAssets({owner, repo, release_id: release.id, per_page: 100})).data;
+            for (const file of files) {
+              for (const asset of assets.filter(item => item.name === file)) {
+                await github.rest.repos.deleteReleaseAsset({owner, repo, asset_id: asset.id});
               }
-              const data = fs.readFileSync(filePath);
+              const data = fs.readFileSync(`release-assets/${file}`);
               await github.rest.repos.uploadReleaseAsset({
-                owner, repo, release_id: release.id, name, data,
-                headers: {
-                  'content-type': 'application/java-archive',
-                  'content-length': data.length,
-                },
+                owner, repo, release_id: release.id, name: file, data,
+                headers: {'content-type':'application/java-archive', 'content-length': data.length},
               });
             }
+            await github.rest.repos.updateRelease({
+              owner, repo, release_id: release.id, name, body,
+              draft: false, prerelease: false, make_latest: 'true',
+            });

@@ -21,9 +21,6 @@ public final class ModerationAlertDetector {
    private static final Pattern FAMILY_BAIT = Pattern.compile(
       "(?iu)(?:мамк?\\p{L}*\\s+привет|беги\\s+(?:к\\s+)?мамк\\p{L}*|без\\s*мамн\\p{L}*|бат\\p{L}*\\s+твой|(?:мать|мат|маму|мамке?|батю|батя|отца|отец|родителей)\\s+(?:чекни|проверь|глянь|смотри)|маму?\\s+(?:чекни|проверь|глянь|смотри))"
    );
-   private static final Pattern KICK = Pattern.compile(
-      "(?iu)^❨[！!]❩\\s*Игрок\\s+([\\p{L}\\p{N}_]{3,16})\\s+(?:кикнул|выгнал)\\s+([\\p{L}\\p{N}_]{3,16})(?:\\s+по\\s+причине:\\s*(.*))?$"
-   );
    private static final Pattern PUNISHMENT_START = Pattern.compile("(?iu)^❨[！!]❩\\s*Игрок\\s+");
    private static final Pattern ABSURD = Pattern.compile("(?iu)^(?:x{2,}|test+|lol+|ахаха+|хаха+|123+|qwe+|asdf+|дурак|идиот|клоун|бред|просто так|без причины)$");
 
@@ -109,19 +106,8 @@ public final class ModerationAlertDetector {
    /** Reports only obvious 3.4 cases from a server punishment announcement. */
    public static String incorrectPunishment(String text, String moderatorName) {
       if (text == null) return null;
-      String normalized = PunishmentAnnouncement.stripUiPrefixes(text).strip().replaceAll("\\s+", " ");
+      String normalized = PunishmentAnnouncement.normalizedText(text);
       if (!PUNISHMENT_START.matcher(normalized).find()) return null;
-
-      Matcher kick = KICK.matcher(normalized);
-      if (kick.matches()) {
-         String issuer = kick.group(1);
-         String target = kick.group(2);
-         String reason = kick.group(3);
-         if (same(issuer, target)) return "Возможное некорректное наказание: модератор наказал сам себя (kick)";
-         if (reason == null || reason.isBlank()) return "Возможное некорректное наказание: kick без причины";
-         if (isAbsurd(reason)) return "Возможное некорректное наказание: подозрительная причина kick";
-         return null;
-      }
 
       PunishmentAnnouncement announcement = PunishmentAnnouncement.parse(normalized);
       if (announcement == null) {

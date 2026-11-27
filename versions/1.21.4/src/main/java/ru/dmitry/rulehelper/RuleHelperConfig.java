@@ -20,7 +20,8 @@ public final class RuleHelperConfig {
 
    public enum CauseStyle {
       SHORT("Укороченное"), EXTENDED("Расширенное"), CORNER("「 」"),
-      DOUBLE_CORNER("『 』"), SPARKLE("✦「 」✦"), BOX("【 】");
+      DOUBLE_CORNER("『 』"), SPARKLE("✦「 」✦"), BOX("【 】"),
+      COLORED("Цветной курсив"), CUSTOM("Свой стиль");
       private final String label;
       CauseStyle(String label) { this.label = label; }
       public String label() { return label; }
@@ -30,6 +31,7 @@ public final class RuleHelperConfig {
    private static String nickname = "";
    private static DonationTier tier;
    private static CauseStyle causeStyle = CauseStyle.SHORT;
+   private static ReasonTemplates reasonTemplates = new ReasonTemplates();
    private static String alertPrefix = "⚠ RuleHelper » ";
    private static String chatMenuPrefix = "»";
    private static int dailyHistoryKey = InputConstants.KEY_F9;
@@ -85,24 +87,23 @@ public final class RuleHelperConfig {
    }
 
    public static String formatCause(String command, String ruleCode, String title) {
-      if (ruleCode == null || title == null) return command;
-      Matcher matcher = Pattern.compile("(?<![0-9.])" + Pattern.quote(ruleCode) + "(?:\\[([^\\]]*)\\])?(?![0-9.])").matcher(command);
-      if (!matcher.find()) return command;
-      String extra = matcher.group(1);
-      if (causeStyle == CauseStyle.SHORT) {
-         String shortReason = ruleCode + (extra == null || extra.isBlank() ? "" : "[" + extra.trim() + "]");
-         return matcher.replaceFirst(Matcher.quoteReplacement(shortReason));
-      }
-      String label = ruleCode.equals("3.4") ? "Некорректные наказания" : title;
-      String text = ruleCode + " | " + label + (extra == null || extra.isBlank() ? "" : " · " + extra.trim());
-      String styled = switch (causeStyle) {
-         case CORNER -> "「 " + text + " 」";
-         case DOUBLE_CORNER -> "『 " + text + " 』";
-         case SPARKLE -> "✦「 " + text + " 」✦";
-         case BOX -> "【 " + text + " 】";
-         default -> text;
-      };
-      return matcher.replaceFirst(Matcher.quoteReplacement(styled));
+      return CauseFormatter.formatCommand(command, ruleCode, title, causeStyle.name(), reasonTemplates);
+   }
+
+   public static String formatReleaseCause() {
+      return CauseFormatter.releaseReason(causeStyle.name(), reasonTemplates);
+   }
+
+   public static ReasonTemplates reasonTemplates() { return reasonTemplates.copy(); }
+
+   public static void saveReasonTemplates(ReasonTemplates templates) {
+      reasonTemplates = templates.copy();
+      causeStyle = CauseStyle.CUSTOM;
+      persist();
+   }
+
+   public static String previewReason(String code, String title, String extra, boolean release) {
+      return CauseFormatter.reason(code, title, extra, release, causeStyle.name(), reasonTemplates);
    }
 
    public static void save(String name, DonationTier selectedTier) {
@@ -118,16 +119,7 @@ public final class RuleHelperConfig {
 
    /** Adds -g for Правитель+ only to rules in sections 1–3; survival and minigames are local. */
    public static String applyDonationScope(String command, String ruleCode) {
-      String normalized = command.trim();
-      while (normalized.endsWith(" -g")) {
-         normalized = normalized.substring(0, normalized.length() - 3).trim();
-      }
-      boolean globalRule = ruleCode != null && (ruleCode.startsWith("1.") || ruleCode.startsWith("2.") || ruleCode.startsWith("3."));
-      boolean shouldUseGlobal = ruleCode == null ? tier == DonationTier.LEADER : globalRule && tier == DonationTier.LEADER;
-      if (shouldUseGlobal) {
-         normalized += " -g";
-      }
-      return normalized;
+      return DonatorScopePolicy.apply(command, ruleCode, tier);
    }
 
    /** Uses an explicitly detected server when releasing an announced punishment. */
@@ -151,6 +143,7 @@ public final class RuleHelperConfig {
       Properties properties = new Properties();
       try (InputStream input = Files.newInputStream(FILE)) {
          properties.load(input);
+         reasonTemplates = ReasonTemplates.readFrom(properties);
          alertPrefix = properties.getProperty("alert_prefix", alertPrefix);
          chatMenuPrefix = properties.getProperty("chat_menu_prefix", chatMenuPrefix);
          try { dailyHistoryKey = Integer.parseInt(properties.getProperty("daily_history_key", Integer.toString(dailyHistoryKey))); }
@@ -179,6 +172,7 @@ public final class RuleHelperConfig {
       properties.setProperty("nickname", nickname);
       if (tier != null) properties.setProperty("donation", tier.name());
       properties.setProperty("causeStyle", causeStyle.name());
+      reasonTemplates.writeTo(properties);
       properties.setProperty("alert_prefix", alertPrefix);
       properties.setProperty("chat_menu_prefix", chatMenuPrefix);
       properties.setProperty("daily_history_key", Integer.toString(dailyHistoryKey));

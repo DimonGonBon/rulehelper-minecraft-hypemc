@@ -7,6 +7,7 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import ru.dmitry.rulehelper.RuleAction;
+import ru.dmitry.rulehelper.DonatorScopePolicy;
 import ru.dmitry.rulehelper.RuleEntry;
 import ru.dmitry.rulehelper.RuleHelperConfig;
 import ru.dmitry.rulehelper.PunishmentScope;
@@ -58,7 +59,8 @@ public final class ActionChoiceScreen extends Screen {
             }));
          cursorY += 34;
       } else {
-         this.addText(this.panelX + 18, cursorY, Component.literal("РЕЖИМ ВЫДАЧИ · ГЛОБАЛЬНО (-g)")
+         this.addText(this.panelX + 18, cursorY, Component.literal(DonatorScopePolicy.usesGlobal(this.rule.code(), RuleHelperConfig.tier())
+            ? "РЕЖИМ ВЫДАЧИ · ГЛОБАЛЬНО (-g)" : "РЕЖИМ ВЫДАЧИ · ТЕКУЩИЙ РЕЖИМ")
             .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), contentWidth, 12);
          cursorY += 26;
       }
@@ -72,7 +74,7 @@ public final class ActionChoiceScreen extends Screen {
          if (cursorY + 23 > availableBottom) break;
          String command = this.scopedCommand(action);
          Component tip = Component.literal(this.rule.punishment()).withStyle(ChatFormatting.YELLOW)
-            .append(Component.literal("\n" + command).withStyle(ChatFormatting.AQUA));
+            .append(Component.literal("\n").append(ReasonComponents.fromCodes(command)));
          this.addRenderableWidget(new BlueButton(this.panelX + 18, cursorY, buttonWidth, 22,
             Component.literal(action.label()).withStyle(ChatFormatting.WHITE), b -> this.execute(action))
             .withTooltip(Tooltip.create(tip)));
@@ -117,13 +119,12 @@ public final class ActionChoiceScreen extends Screen {
    }
 
    private String scopedCommand(RuleAction action) {
-      String command = action.commandFor(this.playerName);
+      String command = RuleHelperConfig.formatCause(action.commandFor(this.playerName), this.rule.code(), this.rule.title());
       if (this.rule.code().equals("release")) {
          PunishmentScope scope = this.scopes()[this.scopeIndex];
          return RuleHelperConfig.applyPunishmentScope(command, null,
             scope == PunishmentScope.RULE_DEFAULT ? PunishmentScope.CURRENT : scope);
       }
-      command = RuleHelperConfig.formatCause(command, this.rule.code(), this.rule.title());
       if (this.rule.code().startsWith("1.") || this.rule.code().startsWith("2.") || this.rule.code().startsWith("3.")) {
          return RuleHelperConfig.applyPunishmentScope(command, this.rule.code(), PunishmentScope.RULE_DEFAULT);
       }

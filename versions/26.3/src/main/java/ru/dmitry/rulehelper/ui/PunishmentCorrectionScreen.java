@@ -8,14 +8,17 @@ import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import ru.dmitry.rulehelper.PunishmentScope;
+import ru.dmitry.rulehelper.DonatorScopePolicy;
+import ru.dmitry.rulehelper.PunishmentCorrectionCommands;
 import ru.dmitry.rulehelper.RuleHelperConfig;
 import ru.dmitry.rulehelper.chat.PunishmentAnnouncement;
 
 /** Shows the captured announcement and fields before any correction command is sent. */
 public final class PunishmentCorrectionScreen extends Screen {
    private final PunishmentAnnouncement announcement;
-   private boolean released;
+   private boolean correctionPrepared;
    private String selectedDuration;
+   private String sentReleaseCommand;
    private int panelX, panelY, panelWidth, panelHeight;
    private int detailsBottom;
 
@@ -33,8 +36,13 @@ public final class PunishmentCorrectionScreen extends Screen {
       int contentX = this.panelX + 18;
       int contentWidth = this.panelWidth - 36;
 
-      this.addCenteredText(this.panelY + 14, Component.literal("ПРОВЕРКА НАКАЗАНИЯ")
-         .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), contentWidth, 16);
+      int styleWidth = Math.min(190, contentWidth / 2);
+      this.addText(contentX, this.panelY + 14, Component.literal("ПРОВЕРКА НАКАЗАНИЯ")
+         .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), contentWidth - styleWidth - 12, 16);
+      this.addRenderableWidget(new BlueButton(this.panelX + this.panelWidth - styleWidth - 18,
+         this.panelY + 9, styleWidth, 22,
+         Component.literal("Причина · " + RuleHelperConfig.causeStyle().label()),
+         b -> this.minecraft.gui.setScreen(new CauseStyleScreen(this))));
       this.addCenteredText(this.panelY + 35, Component.literal("Сверь объявление и данные перед снятием или выдачей наказания")
          .withStyle(ChatFormatting.GRAY), contentWidth, 14);
 
@@ -59,71 +67,101 @@ public final class PunishmentCorrectionScreen extends Screen {
       this.detailsBottom = y + 7;
 
       int actionY = this.detailsBottom + 11;
-      this.addCenteredText(actionY, Component.literal("ДЕЙСТВИЕ")
+      this.addCenteredText(actionY, Component.literal("ДЕЙСТВИЕ · " + this.announcement.kind().label())
          .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), contentWidth, 13);
       actionY += 19;
       if (!RuleHelperConfig.isConfigured()) {
-         this.addCenteredText(actionY, Component.literal("Сначала укажи ник и донат в настройках RuleHelper.")
+         this.addCenteredText(actionY, Component.literal("Сначала укажи ник и группу доната в настройках RuleHelper.")
             .withStyle(ChatFormatting.RED), contentWidth, 14);
-      } else if (!this.released) {
-         PunishmentScope detectedScope = this.detectedScope();
-         if (detectedScope == null) {
-            this.addCenteredText(actionY, Component.literal("Не удалось определить режим наказания из объявления.")
-               .withStyle(ChatFormatting.RED, ChatFormatting.BOLD), contentWidth, 14);
-            actionY += 17;
-            this.addCenteredText(actionY, Component.literal("Автоматическое снятие отключено, чтобы не снять наказание не в том режиме.")
-               .withStyle(ChatFormatting.GRAY), contentWidth, 14);
-         } else {
-            String selector = switch (detectedScope) {
-               case GLOBAL -> "-g";
-               case SURVIVAL -> "server:выживание";
-               case GRIEF -> "server:гриферский";
-               case MINIGAMES -> "server:мини-игры";
-               default -> "текущий режим";
-            };
-            this.addCenteredText(actionY, Component.literal("Режим снятия определён автоматически: " + detectedScope.label()
-               + " · " + selector).withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), contentWidth, 14);
-            actionY += 16;
-            this.addCenteredText(actionY, Component.literal("Наказание 3.4 выдавшему игроку пойдёт глобально (-g).")
+      } else if (!this.correctionPrepared) {
+         if (this.mayCorrectWithoutRelease()) {
+            String explanation = this.announcement.kind() == PunishmentAnnouncement.Kind.KICK
+               ? "Кик уже завершён. Подготовь 3.4 выдавшему игроку."
+               : "Режим варна не указан. Подготовь 3.4; само предупреждение сними отдельно.";
+            this.addCenteredText(actionY, Component.literal(explanation)
                .withStyle(ChatFormatting.YELLOW), contentWidth, 14);
-            actionY += 20;
-            int buttonWidth = Math.min(410, contentWidth - 16);
-            int buttonX = this.width / 2 - buttonWidth / 2;
-            if (this.announcement.issuer().equalsIgnoreCase(this.announcement.target())) {
-               this.addButton("Снять и подготовить 3.4 · 6 часов", buttonX, actionY, buttonWidth,
-                  () -> this.releaseAndPrepare("6h"));
+            actionY = this.addCorrectionPreview(actionY + 18, contentWidth);
+            this.addDurationButtons(actionY + 3, contentWidth, false);
+         } else {
+            PunishmentScope detectedScope = this.detectedScope();
+            if (detectedScope == null) {
+               this.addCenteredText(actionY, Component.literal("Не удалось определить режим наказания из объявления.")
+                  .withStyle(ChatFormatting.RED, ChatFormatting.BOLD), contentWidth, 14);
+               actionY += 17;
+               this.addCenteredText(actionY, Component.literal("Автоматическое снятие отключено: режим должен быть известен.")
+                  .withStyle(ChatFormatting.GRAY), contentWidth, 14);
             } else {
-               this.addButton("Снять и подготовить 3.4 · 3 дня", buttonX, actionY, buttonWidth,
-                  () -> this.releaseAndPrepare("3d"));
-               actionY += 27;
-               this.addButton("Снять и подготовить 3.4 · 1 день", buttonX, actionY, buttonWidth,
-                  () -> this.releaseAndPrepare("1d"));
+               String selector = switch (detectedScope) {
+                  case GLOBAL -> "-g";
+                  case SURVIVAL -> "server:выживание";
+                  case GRIEF -> "server:гриферский";
+                  case MINIGAMES -> "server:мини-игры";
+                  default -> "текущий режим";
+               };
+               this.addCenteredText(actionY, Component.literal("Режим снятия определён автоматически: " + detectedScope.label()
+                  + " · " + selector).withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), contentWidth, 14);
+               actionY = this.addCorrectionPreview(actionY + 16, contentWidth);
+               String releaseLabel = this.announcement.kind() == PunishmentAnnouncement.Kind.WARN ? "Снятие варна: " : "Снятие: ";
+               this.addCenteredText(actionY, Component.literal(releaseLabel).withStyle(ChatFormatting.GRAY)
+                  .append(ReasonComponents.fromCodes(RuleHelperConfig.formatReleaseCause())), contentWidth, 14);
+               this.addDurationButtons(actionY + 18, contentWidth, true);
             }
          }
       } else {
-         this.addCenteredText(actionY, Component.literal("Команда снятия отправлена:")
+         boolean sentRelease = this.sentReleaseCommand != null;
+         this.addCenteredText(actionY, Component.literal(sentRelease
+            ? "Команда снятия отправлена:" : "Подготовлена команда 3.4 выдавшему наказание:")
             .withStyle(ChatFormatting.GRAY), contentWidth, 13);
          actionY += 15;
-         this.addCenteredText(actionY, Component.literal(this.releaseCommand()).withStyle(ChatFormatting.AQUA), contentWidth, 14);
+         this.addCenteredText(actionY, ReasonComponents.fromCodes(sentRelease
+            ? this.sentReleaseCommand : this.correctionCommand()), contentWidth, 14);
          actionY += 18;
-         this.addCenteredText(actionY, Component.literal("Проверь ответ сервера. Подтверди снятие перед выдачей 3.4.")
+         this.addCenteredText(actionY, Component.literal(sentRelease
+            ? "Проверь ответ сервера. Подтверди снятие перед выдачей 3.4."
+            : "Проверь ник, причину и срок. Команда ещё не отправлена.")
             .withStyle(ChatFormatting.YELLOW), contentWidth, 14);
          actionY += 19;
          int buttonWidth = Math.min(410, contentWidth - 16);
-         this.addButton("Подтверждаю снятие · выдать 3.4", this.width / 2 - buttonWidth / 2,
-            actionY, buttonWidth, this::issueRule34);
+         this.addButton(sentRelease ? "Подтверждаю снятие · выдать 3.4" : "Подтверждаю · выдать 3.4",
+            this.width / 2 - buttonWidth / 2, actionY, buttonWidth, this::issueRule34);
       }
 
       int footerY = this.panelY + this.panelHeight - 63;
       this.addCenteredText(footerY, Component.literal("Проверь ник, причину, срок и режим перед действием.")
          .withStyle(ChatFormatting.RED, ChatFormatting.BOLD), contentWidth, 14);
-      this.addCenteredText(footerY + 15, Component.literal("Снятие и выдача наказания выполняются отдельными шагами.")
+      this.addCenteredText(footerY + 15, Component.literal(this.mayCorrectWithoutRelease()
+         ? "3.4 выдаётся игроку из поля «Выдал наказание»."
+         : "Снятие и выдача наказания выполняются отдельными шагами.")
          .withStyle(ChatFormatting.GRAY), contentWidth, 13);
       this.addRenderableWidget(new BlueButton(this.width / 2 - 54, this.panelY + this.panelHeight - 31,
          108, 22, Component.literal("Отмена"), b -> this.close()));
    }
 
+   private int addCorrectionPreview(int y, int contentWidth) {
+      this.addCenteredText(y, Component.literal("Выдача: ").withStyle(ChatFormatting.GRAY)
+         .append(ReasonComponents.fromCodes(RuleHelperConfig.previewReason(
+            "3.4", "Некорректное наказание", null, false)))
+         .append(Component.literal(DonatorScopePolicy.usesGlobal("3.4", RuleHelperConfig.tier())
+            ? " · глобально (-g)" : " · текущий режим").withStyle(ChatFormatting.YELLOW)), contentWidth, 14);
+      return y + 16;
+   }
+
+   private void addDurationButtons(int y, int contentWidth, boolean releaseFirst) {
+      int buttonWidth = Math.min(410, contentWidth - 16);
+      int x = this.width / 2 - buttonWidth / 2;
+      String action = releaseFirst
+         ? (this.announcement.kind() == PunishmentAnnouncement.Kind.WARN ? "Снять варн и подготовить 3.4" : "Снять и подготовить 3.4")
+         : "Подготовить 3.4";
+      if (this.announcement.issuer().equalsIgnoreCase(this.announcement.target())) {
+         this.addButton(action + " · 6 часов", x, y, buttonWidth, () -> this.prepareCorrection("6h", releaseFirst));
+      } else {
+         this.addButton(action + " · 3 дня", x, y, buttonWidth, () -> this.prepareCorrection("3d", releaseFirst));
+         this.addButton(action + " · 1 день", x, y + 27, buttonWidth, () -> this.prepareCorrection("1d", releaseFirst));
+      }
+   }
+
    private int addField(int y, String label, String value, int maxWidth) {
+      if (value == null || value.isBlank()) value = "не указана";
       Component text = Component.literal(label + ": ").withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD)
          .append(Component.literal(value).withStyle(ChatFormatting.AQUA));
       return this.addWrappedComponent(y, text, this.panelX + 18, maxWidth, 14);
@@ -189,31 +227,39 @@ public final class PunishmentCorrectionScreen extends Screen {
       return lines.isEmpty() ? List.of("") : lines;
    }
 
-   private void releaseAndPrepare(String duration) {
-      if (this.minecraft == null || this.minecraft.getConnection() == null || this.released) return;
-      this.selectedDuration = duration;
-      this.minecraft.getConnection().sendCommand(this.releaseCommand().substring(1));
-      this.released = true;
-      this.rebuildWidgets();
+   private boolean mayCorrectWithoutRelease() {
+      return PunishmentCorrectionCommands.mayCorrectWithoutRelease(this.announcement);
    }
 
-   private String releaseCommand() {
-      String verb = this.announcement.kind() == PunishmentAnnouncement.Kind.MUTE
-         ? "/unmute "
-         : (this.announcement.ipTarget() ? "/unbanip " : "/unban ");
-      String command = verb + this.announcement.target() + " nekk";
-      PunishmentScope scope = this.detectedScope();
-      return scope == null ? command : RuleHelperConfig.applyPunishmentScope(command, scope);
+   private void prepareCorrection(String duration, boolean releaseFirst) {
+      if (this.minecraft == null || this.correctionPrepared || !RuleHelperConfig.isConfigured()) return;
+      if (PunishmentCorrectionCommands.correction(this.announcement, duration, RuleHelperConfig.causeStyle().name(), RuleHelperConfig.reasonTemplates(), RuleHelperConfig.tier()) == null) return;
+      if (releaseFirst) {
+         if (this.minecraft.getConnection() == null) return;
+         String command = PunishmentCorrectionCommands.release(this.announcement, RuleHelperConfig.causeStyle().name(), RuleHelperConfig.reasonTemplates());
+         if (command == null) return;
+         this.minecraft.getConnection().sendCommand(command.substring(1));
+         this.sentReleaseCommand = command;
+      } else if (!this.mayCorrectWithoutRelease()) {
+         return;
+      }
+      this.selectedDuration = duration;
+      this.correctionPrepared = true;
+      this.rebuildWidgets();
    }
 
    private PunishmentScope detectedScope() {
       return PunishmentScope.fromAnnouncementMode(this.announcement.mode());
    }
 
+   private String correctionCommand() {
+      return PunishmentCorrectionCommands.correction(this.announcement, this.selectedDuration, RuleHelperConfig.causeStyle().name(), RuleHelperConfig.reasonTemplates(), RuleHelperConfig.tier());
+   }
+
    private void issueRule34() {
-      if (!this.released || this.minecraft == null || this.minecraft.getConnection() == null || !RuleHelperConfig.isConfigured()) return;
-      String raw = "/ban " + this.announcement.issuer() + " " + this.selectedDuration + " 3.4";
-      String command = RuleHelperConfig.applyDonationScope(raw, "3.4");
+      if (!this.correctionPrepared || this.minecraft == null || this.minecraft.getConnection() == null || !RuleHelperConfig.isConfigured()) return;
+      String command = this.correctionCommand();
+      if (command == null) return;
       this.minecraft.getConnection().sendCommand(command.substring(1));
       this.close();
    }
