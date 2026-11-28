@@ -1,0 +1,36 @@
+name: Restore original release download names
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/restore-release-names.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  restore-names:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Restore original titles and show actual JAR filenames
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const targets = [
+              {tag:'v2.0.0', id:461075957, name:'RuleHelper 2.0 — большое обновление для донатеров'},
+              {tag:'v1.3.3-26.3', id:459849450, name:'RuleHelper — Minecraft 26.3'},
+              {tag:'v1.2.1', id:422976338, name:'RuleHelper v1.2.1'},
+            ];
+            const filenames = new Set(['RuleHelper-26.3-Fabric.jar', 'RuleHelper-1.21.11-Fabric.jar', 'RuleHelper-1.21.4-Fabric.jar']);
+            for (const target of targets) {
+              const release = (await github.rest.repos.getReleaseByTag({owner, repo, tag:target.tag})).data;
+              if (release.id !== target.id) throw new Error('Unexpected release ID');
+              const assets = await github.paginate(github.rest.repos.listReleaseAssets, {owner, repo, release_id:release.id, per_page:100});
+              for (const asset of assets.filter(a => filenames.has(a.name))) {
+                const changed = (await github.rest.repos.updateReleaseAsset({owner, repo, asset_id:asset.id, name:asset.name, label:''})).data;
+                if (changed.id !== asset.id || changed.name !== asset.name || changed.size !== asset.size ||
+                    (asset.digest && changed.digest !== asset.digest)) throw new Error('Asset bytes changed unexpectedly');
+                core.info('Restored filename display: ' + target.tag + '/' + changed.name);
+              }
+              await github.rest.repos.updateRelease({owner, repo, release_id:release.id, name:target.name});
+              core.info('Restored release title: ' + target.name);
+            }
