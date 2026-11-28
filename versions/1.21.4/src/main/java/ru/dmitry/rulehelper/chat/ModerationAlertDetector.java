@@ -21,19 +21,29 @@ public final class ModerationAlertDetector {
    private static final Pattern FAMILY_BAIT = Pattern.compile(
       "(?iu)(?:мамк?\\p{L}*\\s+привет|беги\\s+(?:к\\s+)?мамк\\p{L}*|без\\s*мамн\\p{L}*|бат\\p{L}*\\s+твой|(?:мать|мат|маму|мамке?|батю|батя|отца|отец|родителей)\\s+(?:чекни|проверь|глянь|смотри)|маму?\\s+(?:чекни|проверь|глянь|смотри))"
    );
-   private static final Pattern PUNISHMENT_START = Pattern.compile("(?iu)^❨[！!]❩\\s*Игрок\\s+");
+   private static final Pattern PUNISHMENT_START = Pattern.compile("(?iu)^" + PunishmentAnnouncement.NOTICE_MARKER + "\\s*Игрок\\s+");
    private static final Pattern ABSURD = Pattern.compile("(?iu)^(?:x{2,}|test+|lol+|ахаха+|хаха+|123+|qwe+|asdf+|дурак|идиот|клоун|бред|просто так|без причины)$");
 
    private ModerationAlertDetector() {}
 
    /** Returns at most one alert. Caps and spam remain ignored; family mentions always alert. */
    public static String familyInsult(String text) {
+      return familyInsult(text, true, true);
+   }
+
+   public static String notification(String text, String localNickname, ru.dmitry.rulehelper.NotificationPreferences preferences) {
+      String alert = familyInsult(text, preferences.family(), preferences.insults());
+      return alert != null || !preferences.incorrect() ? alert : incorrectPunishment(text, localNickname);
+   }
+
+   private static String familyInsult(String text, boolean familyEnabled, boolean insultsEnabled) {
       if (text == null || text.isBlank()) return null;
       String body = messageBody(text);
       String cleaned = normalize(body);
       String transliterated = normalizeTransliteration(body);
-      if (hasFamilyAlert(cleaned) || hasFamilyAlert(transliterated)) return "Обнаружено возможное упоминание или оскорбление родственников в чате";
-      if (isGeneralInsult(cleaned) || isGeneralInsult(transliterated) || isSpecialInsult(body)) return "Обнаружено возможное оскорбление в чате";
+      if (hasFamilyAlert(cleaned) || hasFamilyAlert(transliterated)) return familyEnabled
+         ? "Обнаружено возможное упоминание или оскорбление родственников в чате" : null;
+      if (insultsEnabled && (isGeneralInsult(cleaned) || isGeneralInsult(transliterated) || isSpecialInsult(body))) return "Обнаружено возможное оскорбление в чате";
       return null;
    }
 
@@ -112,7 +122,7 @@ public final class ModerationAlertDetector {
       PunishmentAnnouncement announcement = PunishmentAnnouncement.parse(normalized);
       if (announcement == null) {
          // Recognize an announcement-shaped line with a missing or unparseable reason.
-         if (normalized.matches("(?iu)^❨[！!]❩\\s*Игрок\\s+[\\p{L}\\p{N}_]{3,16}\\s+(?:забанил|замутил)\\s+.*")) {
+         if (normalized.matches("(?iu)^" + PunishmentAnnouncement.NOTICE_MARKER + "\\s*Игрок\\s+[\\p{L}\\p{N}_]{3,16}\\s+(?:забанил|замутил)\\s+.*")) {
             return "Возможное некорректное наказание: не удалось разобрать причину или срок";
          }
          return null;

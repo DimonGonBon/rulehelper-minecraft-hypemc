@@ -25,6 +25,24 @@ public abstract class ChatScreenMixin {
    private void ruleHelper$openMenuOnNameClick(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
       if (button == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
          Minecraft client = Minecraft.getInstance();
+         String privateMessageName = ChatNameHitTest.findPrivateMessageMenuTarget(client, mouseX, mouseY);
+         if (privateMessageName != null) {
+            if (RuleHelperConfig.isConfigured()) {
+               client.setScreen(new RuleMenuScreen(privateMessageName));
+            } else {
+               client.setScreen(new DonationSetupScreen(privateMessageName));
+            }
+            cir.setReturnValue(true);
+            return;
+         }
+         String coreProtectName = ChatNameHitTest.findCoreProtectCopyTarget(client, mouseX, mouseY);
+         if (coreProtectName != null) {
+            client.keyboardHandler.setClipboard(coreProtectName);
+            client.gui.getChat().addMessage(net.minecraft.network.chat.Component.literal("Скопирован ник: " + coreProtectName)
+               .withStyle(net.minecraft.ChatFormatting.AQUA));
+            cir.setReturnValue(true);
+            return;
+         }
          String copiedName = ChatNameHitTest.findPunishmentCopyTarget(client, mouseX, mouseY);
          if (copiedName != null) {
             client.keyboardHandler.setClipboard(copiedName);
@@ -48,6 +66,12 @@ public abstract class ChatScreenMixin {
             } else {
                client.setScreen(new DonationSetupScreen(name));
             }
+            cir.setReturnValue(true);
+            return;
+         }
+         ru.dmitry.rulehelper.chat.PunishmentRemovalAnnouncement removal = ChatNameHitTest.findRemoval(client, mouseX, mouseY);
+         if (removal != null) {
+            client.setScreen(new ru.dmitry.rulehelper.ui.PunishmentRemovalScreen(removal));
             cir.setReturnValue(true);
             return;
          }

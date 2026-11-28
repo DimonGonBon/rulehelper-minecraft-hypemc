@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "id": "rule_helper",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "name": "Rule Helper",
-  "description": "Donator edition: custom reason templates, rule menus, daily punishment history and ban/mute/warn/kick review.",
+  "description": "Donator edition: PM menu markers, CoreProtect nickname copy, custom reasons, configurable alerts and punishment review.",
   "environment": "client",
   "entrypoints": {
     "client": [

@@ -15,6 +15,8 @@ public final class DonatorSettingsScreen extends Screen {
    private final Screen parent;
    private EditBox menuPrefix;
    private EditBox alertPrefix;
+   private String menuPrefixDraft = RuleHelperConfig.chatMenuPrefix();
+   private String alertPrefixDraft = RuleHelperConfig.alertPrefix();
    private BlueButton historyKeyButton;
    private int historyKey;
    private boolean capturing;
@@ -35,20 +37,27 @@ public final class DonatorSettingsScreen extends Screen {
       this.addCentered(this.panelY + 38, "Префикс перед ником открывает меню; сам ник копируется.", ChatFormatting.GRAY, false);
       this.addLabel(this.panelX + 22, this.panelY + 70, "Префикс меню в чате");
       this.menuPrefix = this.input(this.panelX + 22, this.panelY + 87, this.panelWidth - 44,
-         RuleHelperConfig.chatMenuPrefix(), 8);
+         this.menuPrefixDraft, 8);
+      this.menuPrefix.setResponder(value -> this.menuPrefixDraft = value);
       this.addLabel(this.panelX + 22, this.panelY + 120, "Префикс уведомлений");
       this.alertPrefix = this.input(this.panelX + 22, this.panelY + 137, this.panelWidth - 44,
-         RuleHelperConfig.alertPrefix(), 32);
+         this.alertPrefixDraft, 32);
+      this.alertPrefix.setResponder(value -> this.alertPrefixDraft = value);
       this.addCentered(this.panelY + 178, "ГОРЯЧИЕ КЛАВИШИ", ChatFormatting.GOLD, true);
       this.addCentered(this.panelY + 199, "Home открывает настройки", ChatFormatting.GRAY, false);
       this.addLabel(this.panelX + 22, this.panelY + 234, "История наказаний за день");
       this.historyKeyButton = new BlueButton(this.panelX + this.panelWidth - 190, this.panelY + 228, 168, 24,
          this.historyKeyLabel(), b -> { this.capturing = true; b.setMessage(Component.literal("Нажми клавишу… (Esc — отмена)")); });
       this.addRenderableWidget(this.historyKeyButton);
-      this.addRenderableWidget(new BlueButton(this.width / 2 - 112, this.panelY + this.panelHeight - 35,
-         104, 22, Component.literal("Сохранить"), b -> this.save()));
-      this.addRenderableWidget(new BlueButton(this.width / 2 + 8, this.panelY + this.panelHeight - 35,
-         104, 22, Component.literal("Назад"), b -> this.back()));
+      int footerWidth = (this.panelWidth - 52) / 3;
+      int footerX = this.panelX + 18;
+      int footerY = this.panelY + this.panelHeight - 35;
+      this.addRenderableWidget(new BlueButton(footerX, footerY, footerWidth, 22,
+         Component.literal("Сохранить"), b -> this.save()));
+      this.addRenderableWidget(new BlueButton(footerX + footerWidth + 8, footerY, footerWidth, 22,
+         Component.literal("Уведомления"), b -> this.minecraft.gui.setScreen(new NotificationSettingsScreen(this))));
+      this.addRenderableWidget(new BlueButton(footerX + (footerWidth + 8) * 2, footerY, footerWidth, 22,
+         Component.literal("Назад"), b -> this.back()));
    }
 
    private EditBox input(int x, int y, int width, String value, int max) {

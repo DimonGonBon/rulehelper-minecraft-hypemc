@@ -17,9 +17,15 @@ public final class PunishmentCopyPrefixes {
 
    public static Component add(Component original) {
       PunishmentAnnouncement parsed = PunishmentAnnouncement.parse(original.getString());
-      if (parsed == null) return original;
-      MutableComponent issuer = label(ISSUER_LABEL, parsed.issuer(), ChatFormatting.BLUE, "Скопировать ник выдавшего наказание");
-      MutableComponent target = label(TARGET_LABEL, parsed.target(), ChatFormatting.RED, "Скопировать ник наказанного игрока");
+      PunishmentRemovalAnnouncement removal = PunishmentRemovalAnnouncement.parse(original.getString());
+      if (parsed == null && removal == null) return original;
+      if (original.getString().stripLeading().startsWith(ISSUER_LABEL + " " + TARGET_LABEL + " ")) return original;
+      String issuerName = parsed != null ? parsed.issuer() : removal.issuer();
+      String targetName = parsed != null ? parsed.target() : removal.target();
+      MutableComponent issuer = label(ISSUER_LABEL, issuerName, ChatFormatting.BLUE,
+         removal == null ? "Скопировать ник выдавшего наказание" : "Скопировать ник снявшего наказание");
+      MutableComponent target = label(TARGET_LABEL, targetName, ChatFormatting.RED,
+         removal == null ? "Скопировать ник наказанного игрока" : "Скопировать ник освобождённого игрока");
       // Use an unstyled root so the issuer label's style cannot leak into the
       // target label or the server's original announcement text.
       return Component.empty().append(issuer).append(Component.literal(SEPARATOR))

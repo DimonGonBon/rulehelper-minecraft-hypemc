@@ -15,4 +15,12 @@ final class ChatRowGeometry {
       }
       return -1;
    }
+
+   /** Visible wrapped rows and the original message list both run newest first. */
+   static int originalMessageIndex(int row, int rowCount, java.util.function.IntPredicate endOfEntry) {
+      if (row < 0 || row >= rowCount) return -1;
+      int message = 0;
+      for (int i = 1; i <= row; i++) if (endOfEntry.test(i)) message++;
+      return message;
+   }
 }

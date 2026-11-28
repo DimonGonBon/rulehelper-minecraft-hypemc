@@ -26,6 +26,24 @@ public abstract class ChatScreenMixin {
    private void ruleHelper$openMenuOnNameClick(MouseButtonEvent click, boolean doubled, CallbackInfoReturnable<Boolean> cir) {
       if (click.button() == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT) {
          Minecraft client = Minecraft.getInstance();
+         String privateMessageName = ChatNameHitTest.findPrivateMessageMenuTarget(client, click.x(), click.y());
+         if (privateMessageName != null) {
+            if (RuleHelperConfig.isConfigured()) {
+               client.gui.setScreen(new RuleMenuScreen(privateMessageName));
+            } else {
+               client.gui.setScreen(new DonationSetupScreen(privateMessageName));
+            }
+            cir.setReturnValue(true);
+            return;
+         }
+         String coreProtectName = ChatNameHitTest.findCoreProtectCopyTarget(client, click.x(), click.y());
+         if (coreProtectName != null) {
+            client.keyboardHandler.setClipboard(coreProtectName);
+            client.gui.hud.getChat().addClientSystemMessage(net.minecraft.network.chat.Component.literal("Скопирован ник: " + coreProtectName)
+               .withStyle(net.minecraft.ChatFormatting.AQUA));
+            cir.setReturnValue(true);
+            return;
+         }
          String copiedName = ChatNameHitTest.findPunishmentCopyTarget(client, click.x(), click.y());
          if (copiedName != null) {
             client.keyboardHandler.setClipboard(copiedName);
@@ -49,6 +67,12 @@ public abstract class ChatScreenMixin {
             } else {
                client.gui.setScreen(new DonationSetupScreen(name));
             }
+            cir.setReturnValue(true);
+            return;
+         }
+         ru.dmitry.rulehelper.chat.PunishmentRemovalAnnouncement removal = ChatNameHitTest.findRemoval(client, click.x(), click.y());
+         if (removal != null) {
+            client.gui.setScreen(new ru.dmitry.rulehelper.ui.PunishmentRemovalScreen(removal));
             cir.setReturnValue(true);
             return;
          }

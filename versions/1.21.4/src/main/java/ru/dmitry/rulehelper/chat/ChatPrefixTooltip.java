@@ -11,8 +11,17 @@ public final class ChatPrefixTooltip {
 
    public static void render(GuiGraphics graphics, Minecraft client, int mouseX, int mouseY) {
       if (client == null || client.font == null) return;
-      String player = ChatNameHitTest.findPrefixTarget(client, mouseX, mouseY);
+      if (ChatNameHitTest.hasNativeHoverAt(client, mouseX, mouseY)) return;
+      String player = ChatNameHitTest.findPrivateMessageMenuTarget(client, mouseX, mouseY);
       String hint = "нажми, чтобы открыть меню";
+      if (player == null) {
+         player = ChatNameHitTest.findCoreProtectCopyTarget(client, mouseX, mouseY);
+         hint = "нажми, чтобы скопировать ник";
+      }
+      if (player == null) {
+         player = ChatNameHitTest.findPrefixTarget(client, mouseX, mouseY);
+         hint = "нажми, чтобы открыть меню";
+      }
       if (player == null) {
          player = ChatNameHitTest.findMenuNameCopyTarget(client, mouseX, mouseY);
          hint = "нажми, чтобы скопировать ник";

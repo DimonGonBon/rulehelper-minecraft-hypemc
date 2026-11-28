@@ -32,6 +32,7 @@ public final class RuleHelperConfig {
    private static DonationTier tier;
    private static CauseStyle causeStyle = CauseStyle.SHORT;
    private static ReasonTemplates reasonTemplates = new ReasonTemplates();
+   private static NotificationPreferences notifications = NotificationPreferences.defaults();
    private static String alertPrefix = "⚠ RuleHelper » ";
    private static String chatMenuPrefix = "»";
    private static int dailyHistoryKey = InputConstants.KEY_F9;
@@ -60,6 +61,11 @@ public final class RuleHelperConfig {
 
    public static CauseStyle causeStyle() { return causeStyle; }
    public static String alertPrefix() { return alertPrefix; }
+   public static NotificationPreferences notifications() { return notifications; }
+   public static void setNotifications(NotificationPreferences value) {
+      notifications = java.util.Objects.requireNonNull(value);
+      persist();
+   }
    public static String chatMenuPrefix() { return chatMenuPrefix; }
    public static int dailyHistoryKey() { return dailyHistoryKey; }
 
@@ -144,6 +150,7 @@ public final class RuleHelperConfig {
       try (InputStream input = Files.newInputStream(FILE)) {
          properties.load(input);
          reasonTemplates = ReasonTemplates.readFrom(properties);
+         notifications = NotificationPreferences.readFrom(properties);
          alertPrefix = properties.getProperty("alert_prefix", alertPrefix);
          chatMenuPrefix = properties.getProperty("chat_menu_prefix", chatMenuPrefix);
          try { dailyHistoryKey = Integer.parseInt(properties.getProperty("daily_history_key", Integer.toString(dailyHistoryKey))); }
@@ -173,6 +180,7 @@ public final class RuleHelperConfig {
       if (tier != null) properties.setProperty("donation", tier.name());
       properties.setProperty("causeStyle", causeStyle.name());
       reasonTemplates.writeTo(properties);
+      notifications.writeTo(properties);
       properties.setProperty("alert_prefix", alertPrefix);
       properties.setProperty("chat_menu_prefix", chatMenuPrefix);
       properties.setProperty("daily_history_key", Integer.toString(dailyHistoryKey));

@@ -48,13 +48,24 @@ public final class RuleMenuScreen extends Screen {
    @Override
    protected void init() {
       this.computeLayout();
+      int playerWidth = Math.min(158, Math.max(96, this.panelWidth / 3));
+      int reasonWidth = Math.min(122, Math.max(74, this.panelWidth / 4));
+      int playerX = this.panelX + this.panelWidth - 36 - playerWidth;
+      int reasonX = playerX - 8 - reasonWidth;
+      int titleWidth = Math.max(0, reasonX - (this.panelX + 16) - 12);
       this.addHeaderTitle(this.panelX + 16, this.panelY + 12,
-         Component.literal("RULE HELPER · НАКАЗАНИЕ ИГРОКА").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), this.panelWidth - 330);
-      this.addText(this.panelX + this.panelWidth - 190, this.panelY + 13, "Игрок: " + this.playerName,
-         ChatFormatting.YELLOW, 12, 158);
-      this.addRenderableWidget(new BlueButton(this.panelX + this.panelWidth - 320, this.panelY + 8, 122, 21,
-         Component.literal("Причина · " + RuleHelperConfig.causeStyle().label()),
-         b -> this.minecraft.setScreen(new CauseStyleScreen(this))));
+         Component.literal("RULE HELPER · НАКАЗАНИЕ ИГРОКА").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), titleWidth);
+      Component playerLabel = Component.literal("Игрок: " + this.playerName).withStyle(ChatFormatting.YELLOW);
+      Component fittedPlayer = BlueButton.fitText(this.font, playerLabel, playerWidth);
+      StringWidget playerWidget = new StringWidget(playerX, this.panelY + 13,
+         Math.min(playerWidth, this.font.width(fittedPlayer)), 14, fittedPlayer, this.font);
+      playerWidget.setMaxWidth(playerWidth);
+      playerWidget.setTooltip(Tooltip.create(playerLabel));
+      this.addRenderableWidget(playerWidget);
+      this.addRenderableWidget(new BlueButton(reasonX, this.panelY + 8, reasonWidth, 21,
+         Component.literal("Причина"),
+         b -> this.minecraft.setScreen(new CauseStyleScreen(this))).withTooltip(
+            Tooltip.create(Component.literal("Выбранный стиль: " + RuleHelperConfig.causeStyle().label()))));
 
       int groupY = this.panelY + 49;
       int gap = 4;
@@ -329,7 +340,8 @@ public final class RuleMenuScreen extends Screen {
    }
 
    private void addHeaderTitle(int x, int y, Component text, int maxWidth) {
-      StringWidget widget = new StringWidget(x, y, Math.min(this.font.width(text), maxWidth), 16, text, this.font);
+      Component fitted = BlueButton.fitText(this.font, text, maxWidth);
+      StringWidget widget = new StringWidget(x, y, Math.min(this.font.width(fitted), maxWidth), 16, fitted, this.font);
       widget.setMaxWidth(maxWidth);
       this.addRenderableWidget(widget);
    }

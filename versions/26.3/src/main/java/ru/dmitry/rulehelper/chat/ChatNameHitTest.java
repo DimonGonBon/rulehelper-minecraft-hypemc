@@ -21,15 +21,58 @@ public final class ChatNameHitTest {
       return hit == null ? null : findTokenAt(client.font, hit.line().content(), hit.x());
    }
 
+   /** Prefer the one native Minecraft tooltip already attached to the hovered glyph. */
+   public static boolean hasNativeHoverAt(Minecraft client, double mouseX, double mouseY) {
+      Hit hit = hit(client, mouseX, mouseY);
+      if (hit == null) return false;
+      int[] offset = {0};
+      boolean[] nativeHover = {false};
+      hit.line().content().accept((index, style, codePoint) -> {
+         int width = Math.max(0, client.font.width(Component.literal(new String(Character.toChars(codePoint))).setStyle(style)));
+         if (hit.x() >= offset[0] && hit.x() < offset[0] + width) {
+            nativeHover[0] = style.getHoverEvent() != null;
+            return false;
+         }
+         offset[0] += width;
+         return true;
+      });
+      return nativeHover[0];
+   }
+
+   public static String findPrivateMessageMenuTarget(Minecraft client, double mouseX, double mouseY) {
+      Hit hit = hit(client, mouseX, mouseY);
+      if (hit == null) return null;
+      PrivateMessageMenu.Participants participants = PrivateMessageMenu.parse(hit.line().parent().content().getString(),
+         ru.dmitry.rulehelper.RuleHelperConfig.nickname());
+      int senderWidth = client.font.width(Component.literal(PrivateMessageMenu.SENDER + " ")
+         .withStyle(net.minecraft.ChatFormatting.BLUE));
+      int recipientWidth = client.font.width(Component.literal(PrivateMessageMenu.RECIPIENT + " ")
+         .withStyle(net.minecraft.ChatFormatting.AQUA));
+      return PrivateMessageMenu.targetAt(participants, formattedText(hit.line().content()), hit.x(), senderWidth, recipientWidth);
+   }
+
+   /** Direct clipboard target from the visible CoreProtect row; no menu marker is required. */
+   public static String findCoreProtectCopyTarget(Minecraft client, double mouseX, double mouseY) {
+      Hit hit = hit(client, mouseX, mouseY);
+      if (hit == null) return null;
+      String name = CoreProtectNameCopy.targetAt(hit.line().content(), hit.x(),
+         ru.dmitry.rulehelper.RuleHelperConfig.chatMenuPrefix(),
+         (style, codePoint) -> client.font.width(Component.literal(new String(Character.toChars(codePoint))).setStyle(style)));
+      if (name == null) return null;
+      CoreProtectNameCopy.Actor original = CoreProtectNameCopy.actor(hit.line().parent().content().getString(),
+         ru.dmitry.rulehelper.RuleHelperConfig.chatMenuPrefix());
+      return original == null || original.name().equals(name) ? name : null;
+   }
+
    /** Only the explicit RuleHelper marker opens the punishment menu; the nick text stays inert. */
    public static String findPrefixTarget(Minecraft client, double mouseX, double mouseY) {
       Hit hit = hit(client, mouseX, mouseY);
       if (hit == null) return null;
       String prefix = ru.dmitry.rulehelper.RuleHelperConfig.chatMenuPrefix();
       String message = hit.line().parent().content().getString();
-      if (prefix.isBlank() || !message.startsWith(prefix + " ")) return null;
-      double prefixWidth = client.font.width(Component.literal(prefix + " "));
-      if (hit.x() >= prefixWidth) return null;
+      int prefixWidth = client.font.width(Component.literal(prefix + " ")
+         .withStyle(net.minecraft.ChatFormatting.AQUA, net.minecraft.ChatFormatting.BOLD));
+      if (!ChatMenuPrefix.isPrefixHit(message, formattedText(hit.line().content()), prefix, hit.x(), prefixWidth)) return null;
       return ru.dmitry.rulehelper.chat.ChatMenuPrefix.sender(message.substring(prefix.length() + 1));
    }
 
@@ -42,7 +85,9 @@ public final class ChatNameHitTest {
       String message = hit.line().parent().content().getString();
       if (!message.startsWith(prefix + " ")) return null;
       String sender = ru.dmitry.rulehelper.chat.ChatMenuPrefix.sender(message.substring(prefix.length() + 1));
-      if (sender == null || hit.x() < client.font.width(Component.literal(prefix + " "))) return null;
+      if (sender == null) return null;
+      if (formattedText(hit.line().content()).startsWith(prefix + " ") && hit.x() < client.font.width(
+         Component.literal(prefix + " ").withStyle(net.minecraft.ChatFormatting.AQUA, net.minecraft.ChatFormatting.BOLD))) return null;
       String hoveredName = findTokenAt(client.font, hit.line().content(), hit.x(), true);
       return sender.equalsIgnoreCase(hoveredName) ? sender : null;
    }
@@ -55,17 +100,26 @@ public final class ChatNameHitTest {
       return PunishmentAnnouncement.parse(hit.line().parent().content().getString());
    }
 
+   public static PunishmentRemovalAnnouncement findRemoval(Minecraft client, double mouseX, double mouseY) {
+      Hit hit = hit(client, mouseX, mouseY);
+      if (hit == null || hit.line().parent().source() != GuiMessageSource.SYSTEM_SERVER) return null;
+      return PunishmentRemovalAnnouncement.parse(hit.line().parent().content().getString());
+   }
+
    /** Resolve the actor or target label at the beginning of a punishment row. */
    public static String findPunishmentCopyTarget(Minecraft client, double mouseX, double mouseY) {
       Hit hit = hit(client, mouseX, mouseY);
       if (hit == null || hit.line().parent().source() != GuiMessageSource.SYSTEM_SERVER) return null;
       PunishmentAnnouncement announcement = PunishmentAnnouncement.parse(hit.line().parent().content().getString());
-      if (announcement == null) return null;
+      PunishmentRemovalAnnouncement removal = PunishmentRemovalAnnouncement.parse(hit.line().parent().content().getString());
+      if (announcement == null && removal == null) return null;
+      String issuer = announcement != null ? announcement.issuer() : removal.issuer();
+      String target = announcement != null ? announcement.target() : removal.target();
       String visiblePrefix = formattedText(hit.line().content());
       if (!visiblePrefix.startsWith(PunishmentCopyPrefixes.ISSUER_LABEL + " " + PunishmentCopyPrefixes.TARGET_LABEL + " ")) return null;
       String part = PunishmentCopyPrefixes.targetAt(hit.x(), client.font);
-      if ("issuer".equals(part)) return announcement.issuer();
-      if ("target".equals(part)) return announcement.target();
+      if ("issuer".equals(part)) return issuer;
+      if ("target".equals(part)) return target;
       return null;
    }
 

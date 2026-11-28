@@ -6,10 +6,11 @@ import java.util.regex.Pattern;
 
 /** Parses server announcements for bans, mutes, warnings and kicks. */
 public record PunishmentAnnouncement(Kind kind, String issuer, String target, String duration, String reason, String originalLine, boolean ipTarget) {
+   static final String NOTICE_MARKER = "(?:❨\\s*[！!]\\s*❩|\\(\\s*[！!]\\s*\\))";
    private static final String NAME = "[\\p{L}\\p{N}_]{3,16}";
    private static final String DURATION = "(?:навсегда|[0-9]{1,4}\\s+(?:секунд(?:у|ы)?|минут(?:у|ы)?|час(?:а|ов)?|день|дня|дней|неделю|недели|месяц|месяца|месяцев))";
    private static final Pattern MESSAGE = Pattern.compile(
-      "^❨[！!]❩\\s*Игрок\\s+(" + NAME + ")\\s+"
+      "^" + NOTICE_MARKER + "\\s*Игрок\\s+(" + NAME + ")\\s+"
          + "(забанил|замутил|предупредил|выдал\\s+(?:предупреждение|варн)|кикнул|выгнал|выкинул)\\s+"
          + "(IP\\s+)?(?:игрок[ау]\\s+)?(" + NAME + ")>?"
          + "(?:\\s+с\\s+сервера)?(?:\\s+на\\s+(" + DURATION + "))?"
@@ -17,7 +18,7 @@ public record PunishmentAnnouncement(Kind kind, String issuer, String target, St
       Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
    );
    private static final Pattern MODE = Pattern.compile("^(.*?)\\s*\\(([^()]*)\\)\\s*$");
-   private static final Pattern ANNOUNCEMENT_START = Pattern.compile("(?iu)^❨[！!]❩\\s*Игрок\\s+");
+   private static final Pattern ANNOUNCEMENT_START = Pattern.compile("(?iu)^" + NOTICE_MARKER + "\\s*Игрок\\s+");
    private static final Pattern UI_PREFIXES = Pattern.compile("(?iu)^🛡\\s+☠\\s*");
 
    public enum Kind {

@@ -28,7 +28,10 @@ public abstract class ChatHistoryCaptureMixin {
    @ModifyVariable(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/GuiMessageTag;)V",
       at = @At("HEAD"), argsOnly = true, ordinal = 0)
    private Component ruleHelper$addPrefixes(Component content) {
-      return PunishmentCopyPrefixes.add(ChatMenuPrefix.add(content));
+      if (ru.dmitry.rulehelper.chat.PrivateMessageMenu.parse(content.getString(), RuleHelperConfig.nickname()) != null) {
+         return ru.dmitry.rulehelper.chat.PrivateMessageMenu.add(content, RuleHelperConfig.nickname());
+      }
+      return PunishmentCopyPrefixes.add(ChatMenuPrefix.add(ru.dmitry.rulehelper.chat.CoreProtectNameCopy.addNativeCopy(content)));
    }
 
    @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/GuiMessageTag;)V",
@@ -41,8 +44,8 @@ public abstract class ChatHistoryCaptureMixin {
          return;
       }
       if (ruleHelper$addingAlert) return;
-      String alert = ModerationAlertDetector.familyInsult(line);
-      if (alert == null) alert = ModerationAlertDetector.incorrectPunishment(line, RuleHelperConfig.nickname());
+      var preferences = RuleHelperConfig.notifications();
+      String alert = ModerationAlertDetector.notification(line, RuleHelperConfig.nickname(), preferences);
       if (alert == null) return;
       ruleHelper$addingAlert = true;
       try {
@@ -50,7 +53,7 @@ public abstract class ChatHistoryCaptureMixin {
          client.gui.getChat().addMessage(Component.empty()
             .append(Component.literal(RuleHelperConfig.alertPrefix()).withStyle(ChatFormatting.RED, ChatFormatting.BOLD))
             .append(Component.literal(alert).withStyle(ChatFormatting.WHITE)));
-         client.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BELL.value(), 1.0F, 1.2F));
+         if (preferences.sound()) client.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BELL.value(), 1.0F, 1.2F));
       } finally {
          ruleHelper$addingAlert = false;
       }

@@ -2,7 +2,7 @@ plugins {
     id 'net.fabricmc.fabric-loom' version '1.17.21'
 }
 
-version = '2.0.0'
+version = '2.1.0'
 group = 'ru.dmitry'
 
 base {
@@ -66,3 +66,38 @@ tasks.register('donatorScopeTest', JavaExec) {
  mainClass = 'ru.dmitry.rulehelper.DonatorScopeTest'
 }
 check.dependsOn donatorScopeTest
+
+tasks.register('coreProtectLogTest', JavaExec) {
+ dependsOn testClasses
+ classpath = sourceSets.test.runtimeClasspath
+ mainClass = 'ru.dmitry.rulehelper.chat.CoreProtectLogTest'
+}
+check.dependsOn coreProtectLogTest
+
+tasks.register('coreProtectNameCopyTest', JavaExec) {
+ dependsOn testClasses
+ classpath = sourceSets.test.runtimeClasspath
+ mainClass = 'ru.dmitry.rulehelper.chat.CoreProtectNameCopyTest'
+}
+check.dependsOn coreProtectNameCopyTest
+
+tasks.register('privateMessageMenuTest', JavaExec) {
+ dependsOn testClasses
+ classpath = sourceSets.test.runtimeClasspath
+ mainClass = 'ru.dmitry.rulehelper.chat.PrivateMessageMenuTest'
+}
+check.dependsOn privateMessageMenuTest
+
+tasks.register('notificationPreferencesTest', JavaExec) {
+ dependsOn testClasses
+ classpath = sourceSets.test.runtimeClasspath
+ mainClass = 'ru.dmitry.rulehelper.NotificationPreferencesTest'
+}
+check.dependsOn notificationPreferencesTest
+
+tasks.register('punishmentRemovalTest', JavaExec) {
+ dependsOn testClasses
+ classpath = sourceSets.test.runtimeClasspath
+ mainClass = 'ru.dmitry.rulehelper.PunishmentRemovalTest'
+}
+check.dependsOn punishmentRemovalTest

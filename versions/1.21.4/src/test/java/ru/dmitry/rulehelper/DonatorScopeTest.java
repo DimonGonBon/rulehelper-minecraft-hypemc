@@ -28,6 +28,15 @@ public final class DonatorScopeTest {
          require(PunishmentCorrectionCommands.correction(announcement, "1d", "SHORT", null, null) == null,
             "an unconfigured group cannot prepare a punishment");
       }
+      var removal = ru.dmitry.rulehelper.chat.PunishmentRemovalAnnouncement.parse(
+         "( ! ) Игрок Issuer123 разбанил Victim123 по причине: 3.4 (гриферский)");
+      require(removal != null, "parse the donor 3.5 review source");
+      require(PunishmentRemovalCommands.correction(removal, "SHORT", null, DonationTier.LEADER)
+         .equals("/ban Issuer123 1d 3.5 -g"), "Правитель+ keeps its existing global 3.5 scope");
+      require(PunishmentRemovalCommands.correction(removal, "SHORT", null, DonationTier.STAFF)
+         .equals("/ban Issuer123 1d 3.5"), "Staff- does not inherit a moderator's global 3.5 scope");
+      require(PunishmentRemovalCommands.correction(removal, "SHORT", null, null) == null,
+         "no 3.5 command before donor profile setup");
       System.out.println("PASS: donor-only catalog and Правитель+/Staff- scope restrictions across all four punishment types");
    }
    private static void require(boolean ok, String label) { if (!ok) throw new AssertionError(label); }

@@ -35,7 +35,8 @@ public final class BlueButton extends AbstractWidget {
       graphics.fill(x, y, x + 1, y + this.height, border);
       graphics.fill(x + this.width - 1, y, x + this.width, y + this.height, border);
       int color = this.active ? 0xFFF3F8FC : 0xFF8996A5;
-      graphics.drawCenteredString(Minecraft.getInstance().font, this.getMessage(), x + this.width / 2,
+      graphics.drawCenteredString(Minecraft.getInstance().font, fitText(Minecraft.getInstance().font, this.getMessage(),
+         Math.max(0, this.width - (this.width <= 24 ? 4 : 12))), x + this.width / 2,
          y + (this.height - 8) / 2, color);
    }
 
@@ -43,6 +44,22 @@ public final class BlueButton extends AbstractWidget {
    public void onClick(double mouseX, double mouseY) {
       this.playDownSound(Minecraft.getInstance().getSoundManager());
       this.onPress.onPress(this);
+   }
+
+   /** Fit labels to the actual styled font width; keep small icon buttons intact. */
+   static Component fitText(net.minecraft.client.gui.Font font, Component label, int maxWidth) {
+      int available = Math.max(0, maxWidth);
+      if (font.width(label) <= available) return label;
+      String ellipsis = "…";
+      Component dots = Component.literal(ellipsis).setStyle(label.getStyle());
+      if (font.width(dots) > available) return Component.empty();
+      String value = label.getString();
+      while (!value.isEmpty()) {
+         value = value.substring(0, value.offsetByCodePoints(value.length(), -1));
+         Component fitted = Component.literal(value + ellipsis).setStyle(label.getStyle());
+         if (font.width(fitted) <= available) return fitted;
+      }
+      return dots;
    }
 
    @Override

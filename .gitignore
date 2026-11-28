@@ -3,3 +3,7 @@
 *.log
 .DS_Store
 **/.standalone-cache/
+
+# Private moderator projects stay outside the public donor repository.
+/moderator/
+/.github/workflows/build-moderator.yml
