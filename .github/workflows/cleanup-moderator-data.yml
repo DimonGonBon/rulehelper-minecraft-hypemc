@@ -1,0 +1,37 @@
+name: Clean public moderator build data
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/cleanup-moderator-data.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove moderator artifacts, test runs and public test branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const artifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {owner, repo, per_page:100});
+            const privateArtifacts = artifacts.filter(a => /moderator/i.test(a.name));
+            for (const artifact of privateArtifacts) {
+              await github.rest.actions.deleteArtifact({owner, repo, artifact_id:artifact.id});
+            }
+            const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {owner, repo, per_page:100});
+            const privateRuns = runs.filter(r => r.id !== context.runId &&
+              (r.path === '.github/workflows/build-moderator.yml' || /moderator/i.test(r.name || '') || r.head_branch === 'test/personal-colored-reasons'));
+            for (const run of privateRuns) {
+              await github.rest.actions.deleteWorkflowRun({owner, repo, run_id:run.id});
+            }
+            try {
+              await github.rest.git.deleteRef({owner, repo, ref:'heads/test/personal-colored-reasons'});
+            } catch (error) {
+              if (error.status !== 404 && error.status !== 422) throw error;
+            }
+            core.info('Removed moderator artifacts: ' + privateArtifacts.length);
+            core.info('Removed moderator/test workflow runs: ' + privateRuns.length);
+            core.info('Moderator test branch removal complete.');
